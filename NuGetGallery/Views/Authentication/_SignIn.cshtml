@@ -1,0 +1,87 @@
+@* Converted from ASP.NET MVC 5 to ASP.NET Core 9 MVC Razor. *@
+@model NuGetGallery.ViewModels.LogOnViewModel
+@using NuGetGallery
+@inject NuGetGallery.Configuration.IGalleryConfigurationService Config
+
+@functions {
+    private string ErrorClass(string key)
+    {
+        return ViewData.ModelState.TryGetValue(key, out var entry) && entry.Errors.Count > 0
+            ? "has-error"
+            : string.Empty;
+    }
+}
+
+@{
+    var returnUrl = ViewData.TryGetValue(GalleryConstants.ReturnUrlViewDataKey, out var returnUrlValue)
+        ? returnUrlValue as string
+        : (Context.Request.Path + Context.Request.QueryString).ToString();
+}
+
+<form asp-controller="Authentication" asp-action="SignIn" method="post" asp-antiforgery="true">
+    <input type="hidden" name="ReturnUrl" value="@returnUrl" />
+    <input type="hidden" name="LinkingAccount" value="@(Model.External != null ? "True" : "False")" />
+
+    @if (Model.External != null)
+    {
+        <input type="hidden" asp-for="External.ProviderAccountNoun" />
+        <input type="hidden" asp-for="External.AccountName" />
+        <input type="hidden" asp-for="External.FoundExistingUser" />
+    }
+
+    <div class="form-group @ErrorClass("SignIn")">
+        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    </div>
+
+    <div class="form-group @ErrorClass("SignIn.UserNameOrEmail")">
+        <label asp-for="SignIn.UserNameOrEmail" class="control-label"></label>
+        @if (Model.External != null && !string.IsNullOrEmpty(Model.SignIn.UserNameOrEmail))
+        {
+            <input type="hidden" asp-for="SignIn.UserNameOrEmail" />
+            <p>@Model.SignIn.UserNameOrEmail</p>
+        }
+        else
+        {
+            <input asp-for="SignIn.UserNameOrEmail" class="form-control input-brand" />
+        }
+        <span asp-validation-for="SignIn.UserNameOrEmail" class="text-danger"></span>
+    </div>
+
+    <div class="form-group @ErrorClass("SignIn.Password")">
+        <label asp-for="SignIn.Password" class="control-label"></label>
+        <input asp-for="SignIn.Password" class="form-control input-brand" type="password" />
+        <span asp-validation-for="SignIn.Password" class="text-danger"></span>
+    </div>
+
+    <p>
+        <a asp-controller="Users" asp-action="ForgotPassword">Forgot your Password?</a>
+    </p>
+
+    @if (Model.External != null && !Model.External.FoundExistingUser)
+    {
+        <div class="form-group row">
+            <div class="col-sm-6">
+                <input type="submit" class="btn btn-brand form-control" value="Sign in" />
+            </div>
+            <div class="col-sm-6">
+                <input type="reset" class="btn btn-brand-transparent form-control" value="Cancel" id="cancel-sign-in" />
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="form-group">
+            <input type="submit" class="btn btn-brand form-control" value="Sign in" />
+        </div>
+        @if (!Config.Current.DeprecateNuGetPasswordLogins && (Model.External == null || !Model.External.FoundExistingUser))
+        {
+            <p class="text-center">
+                Don't have an account? <a asp-controller="Authentication" asp-action="Register" asp-route-returnUrl="@returnUrl">Register</a>
+            </p>
+        }
+    }
+</form>
+
+@section Scripts {
+    @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+}

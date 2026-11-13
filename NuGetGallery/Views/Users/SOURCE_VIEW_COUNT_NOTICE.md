@@ -1,0 +1,3 @@
+# Source-count notice
+
+The supplied prompt names and includes **seven** source views, not eight: `_DeleteUserAccountForm.cshtml`, `_UserAccountChangeExternalCredential.cshtml`, `_UserAccountChangePassword.cshtml`, `_UserAccountLinkExternalCredential.cshtml`, `_UserOrganizationsListForDeletedAccount.cshtml`, `_UserPackagesListForDeletedAccount.cshtml`, and `Account.cshtml`. The two attached pasted-text files also do not contain these named sources. No eighth view was invented. This notice is the ninth archive entry so that the requested archive has exactly nine non-empty files. Supply the missing eighth source view to complete that conversion.

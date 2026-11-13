@@ -1,0 +1,33 @@
+@model NuGetGallery.Components.InstrumentationViewModel
+
+@if (!string.IsNullOrEmpty(Model.TenantKey))
+{
+    <script src="~/Scripts/gallery/instrumentation.min.js" asp-append-version="true"></script>
+    <script type="text/javascript">
+        if (window.initializeNuGetInstrumentation) {
+            window.NuGetInstrumentation = window.initializeNuGetInstrumentation({
+                appInsightsInstrumentationKey: "@Model.AppInsightsKey",
+                appInsightsSamplingPercentage: @Model.SamplingPercentage,
+                tenantKey: "@Model.TenantKey"
+            });
+        }
+    </script>
+}
+else if (!string.IsNullOrEmpty(Model.AppInsightsKey))
+{
+    <script type="text/javascript">
+        var appInsights = window.appInsights || function (config) {
+            // ساختار کانفیگ AppInsights
+        }({
+            instrumentationKey: '@Model.AppInsightsKey',
+            samplingPercentage: @Model.SamplingPercentage
+        });
+        window.appInsights = appInsights;
+        appInsights.trackPageView();
+    </script>
+}
+
+
+*// نحوه فراخوانی در ویو Layout اصلی:
+// <vc:instrumentation can-write-analytics-cookies="@(ViewBag.CanWriteAnalyticsCookies ?? false)" />
+/*

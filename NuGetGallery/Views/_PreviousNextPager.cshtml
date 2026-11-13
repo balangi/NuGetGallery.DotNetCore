@@ -1,0 +1,27 @@
+@model NuGetGallery.IPreviousNextPager
+
+@if (Model.HasNextPage || Model.HasPreviousPage)
+{
+    <ul class="pager">
+        <li class="previous">
+            @if (Model.HasPreviousPage)
+            {
+                <a href="@Model.PreviousPageUrl" title="Go to the previous page.">Previous</a>
+            }
+            else
+            {
+                <span>Previous</span>
+            }
+        </li>
+        <li class="next">
+            @if (Model.HasNextPage)
+            {
+                <a href="@Model.NextPageUrl" title="Go to the next page.">Next</a>
+            }
+            else
+            {
+                <span>Next</span>
+            }
+        </li>
+    </ul>
+}

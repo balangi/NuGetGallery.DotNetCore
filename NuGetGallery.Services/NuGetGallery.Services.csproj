@@ -1,0 +1,14 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\NuGet.Services.Staging\NuGet.Services.Staging.csproj" />
+    <ProjectReference Include="..\NuGetGallery.Core\NuGetGallery.Core.csproj" />
+  </ItemGroup>
+
+</Project>

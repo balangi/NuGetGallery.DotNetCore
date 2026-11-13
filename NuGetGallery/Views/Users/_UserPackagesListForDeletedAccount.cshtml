@@ -1,0 +1,22 @@
+@model DeleteAccountViewModel
+@{
+    var isOrganization = Model.User is Organization;
+    var hasSingleOwnerMessage = isOrganization ? "You must transfer ownership of this package before you can delete your organization." : "After account deletion, this package will not have any owners.";
+    var hasMultipleOwnersMessage = isOrganization ? "You do not need to transfer ownership of this package before you can delete your organization." : "After account deletion, this package will still have at least one owner.";
+}
+@if (!Model.Packages.Any()) { <p>This account owns no packages.</p> }
+else
+{
+<div class="row user-package-list align-left"><div class="col-md-12 align-left"><div class="collapse show" id="packages-Packages"><div class="list-packages" role="list">
+<table class="table table-responsive align-left" aria-label="Packages"><thead><tr class="manage-package-headings"><th class="d-none d-sm-table-cell"></th><th class="d-none d-sm-table-cell"></th><th>Package ID</th><th>Owners</th><th>Downloads</th><th>Latest Version</th><th class="d-none d-sm-table-cell"></th></tr></thead><tbody>
+@foreach (var package in Model.Packages)
+{
+    var hasIcon = PackageHelper.ShouldRenderUrl(package.IconUrl);
+    <tr class="manage-package-listing"><td class="align-middle">@if (package.WillBeOrphaned) { <i class="ms-Icon ms-Icon--StatusErrorFull red-check" title="@hasSingleOwnerMessage" aria-hidden="true"></i> } else { <i class="ms-Icon ms-Icon--CompletedSolid green-check" title="@hasMultipleOwnersMessage" aria-hidden="true"></i> }</td>
+    <td class="align-middle d-none d-sm-table-cell"><img class="package-icon img-responsive @(!hasIcon ? "package-default-icon" : null)" aria-hidden="true" alt="Package Icon" src="@(hasIcon ? package.IconUrl : Url.Content("~/Content/Images/package-default-icon.png"))" onerror="this.onerror=null;this.src='@Url.Content("~/Content/Images/package-default-icon.png")';" /></td>
+    <td class="align-middle package-id"><a href="@Url.Package(package.Id)" title="@package.Id">@(package.Id.Length > 40 ? package.Id.Substring(0, 40) + "…" : package.Id)</a></td><td class="align-middle">
+    @{ var ownerCount = package.Owners.Count; var shown = 0; foreach (var owner in package.Owners) { if (shown >= 2) { break; } if (shown > 0) { <text>,&nbsp;</text> } <a href="@Url.User(owner.Username)" title="@owner.Username">@owner.Username</a> <span class="owner-icon" aria-hidden="true"><i class="ms-Icon ms-Icon--Contact"></i></span>; shown++; } if (ownerCount > 2) { <span class="ms-noWrap">+ @(ownerCount - 1)</span> } }
+    </td><td class="align-middle text-nowrap">@package.TotalDownloadCount.ToNuGetNumberString()</td><td class="align-middle text-nowrap">@(package.FullVersion.Length > 15 ? package.FullVersion.Substring(0, 15) + "…" : package.FullVersion)</td><td class="text-right align-middle package-controls"><a href="@Url.ManagePackage(package)" class="btn-brand-icon" title="Manage" aria-label="Manage Package @package.Id"><i class="ms-Icon ms-Icon--People" aria-hidden="true"></i></a></td></tr>
+}
+</tbody></table></div></div></div></div>
+}

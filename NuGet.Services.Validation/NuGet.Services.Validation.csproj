@@ -1,0 +1,26 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="NuGet.Versioning" Version="8.0.0" />
+		<!-- پکیج اصلی EF Core -->
+		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.15" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.15" />
+
+		<!-- پکیج ابزارها و دستورات مایگریشن (برای کامندلاین و PM Console) -->
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.15">
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+			<PrivateAssets>assets</PrivateAssets>
+		</PackageReference>
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\NuGet.Services.ServiceBus\NuGet.Services.ServiceBus.csproj" />
+	</ItemGroup>
+
+</Project>

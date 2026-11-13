@@ -1,0 +1,59 @@
+@model AccountViewModel
+@{
+    var controllerName = Model.IsOrganization ? "Organizations" : "Users";
+    var sectionDisabled = !Model.CanManage;
+    var brand = Config.Current.Brand;
+    var emailAllowedLabel = Model.IsOrganization ? "Users can contact the organization through the " + brand : "Users can contact me through the " + brand;
+    var emailAllowedDescriptionStart = Model.IsOrganization
+        ? "This setting allows other registered users of the site to contact your organization about packages that it owns using the "
+        : "This setting allows other registered users of the site to contact you about packages that you own using the ";
+    var emailAllowedDescriptionEnd = Model.IsOrganization
+        ? " form, or to request that your organization become an owner of their package. Disabling this setting means users cannot contact your organization for these reasons."
+        : " form, or to request that you become an owner of their package. Disabling this setting means users cannot contact you for these reasons.";
+    var privacyNotice = Model.IsOrganization
+        ? "We will always send important account management and security notices. Also, we never reveal the organization email address to other users."
+        : "We will always send important account management and security notices. Also, we never reveal your email address to other users.";
+}
+<section id="change-notifications" class="account-section @(sectionDisabled ? "disabled" : null)" aria-disabled="@sectionDisabled">
+    <h2 id="change-notifications-section-header"><button type="button" class="account-section-toggle" data-toggle="collapse" data-target="#change-notifications-body" aria-controls="change-notifications-body" aria-expanded="false" disabled="@(sectionDisabled ? "disabled" : null)">Email Notifications</button></h2>
+    <div id="change-notifications-body" class="collapse">
+        <p>
+            @(Model.ChangeNotifications.EmailAllowed ? "Users can contact" : "Users can not contact") |
+            @(Model.ChangeNotifications.NotifyPackagePushed ? "Receiving package push notifications" : "Not receiving package push notifications")
+            @if (Model.IsPackageStagingEnabled)
+            { <text> | @(Model.ChangeNotifications.NotifyPackageStaged ? "Receiving staging notifications" : "Not receiving staging notifications")</text> }
+        </p>
+        <form method="post" action="@Url.Action("ChangeEmailSubscription", controllerName)" aria-label="Change email subscription settings">
+            @Html.AntiForgeryToken()
+            <fieldset disabled="@(sectionDisabled ? "disabled" : null)">
+                <div>
+                    <label class="brand-checkbox"><input asp-for="ChangeNotifications.EmailAllowed" /><span><b id="emailallowed-label">@emailAllowedLabel</b></span></label>
+                    <div class="label-sibling">@emailAllowedDescriptionStart<em>Contact Owners</em>@emailAllowedDescriptionEnd</div>
+                    <span asp-validation-for="ChangeNotifications.EmailAllowed" class="text-danger"></span>
+                </div>
+                <div>
+                    <label class="brand-checkbox"><input asp-for="ChangeNotifications.NotifyPackagePushed" /><span><b id="notifypackagepushed-label">Notify when a package is published to @brand</b></span></label>
+                    <div class="label-sibling">This setting enables notifications whenever a package is published to your account. We recommend enabling this setting so that you can inspect whether a package was published intentionally and so that you can be notified if there are unexpected delays in publishing your package.</div>
+                    <span asp-validation-for="ChangeNotifications.NotifyPackagePushed" class="text-danger"></span>
+                </div>
+                @if (Model.IsPackageStagingEnabled)
+                {
+                    <div>
+                        <label class="brand-checkbox"><input asp-for="ChangeNotifications.NotifyPackageStaged" /><span><b id="notifypackagestaged-label">Receive staging notifications</b></span></label>
+                        <div class="label-sibling">Receive notifications for staged uploads and successful or delayed validation. Validation failures are always sent.</div>
+                        <span asp-validation-for="ChangeNotifications.NotifyPackageStaged" class="text-danger"></span>
+                    </div>
+                }
+                else
+                {
+                    <input asp-for="ChangeNotifications.NotifyPackageStaged" type="hidden" />
+                }
+                <p><strong>Note: </strong>@privacyNotice</p>
+                <div class="row form-group">
+                    <div class="col-sm-6"><input type="submit" class="btn btn-brand form-control" value="Save" /></div>
+                    <div class="col-sm-6"><button type="button" class="btn btn-brand-secondary form-control" id="cancel-change-notifications">Cancel</button></div>
+                </div>
+            </fieldset>
+        </form>
+    </div>
+</section>

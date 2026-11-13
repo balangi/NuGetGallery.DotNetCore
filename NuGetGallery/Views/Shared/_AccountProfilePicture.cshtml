@@ -1,0 +1,25 @@
+@model AccountViewModel
+@{
+    var disabled = !Model.CanManage;
+    var unconfirmedMessage = Model.IsOrganization
+        ? "This is a preview of how the profile picture will look once the organization email address is verified."
+        : "This is a preview of how your profile picture will look once you have verified your current email address.";
+    var gravatarTextBefore = Model.IsOrganization
+        ? "We use the organization's name and its verified email address to get its publicly visible Gravatar profile picture (or a default image if it does not have a Gravatar profile picture). Please go to "
+        : "We use your public profile name and your verified email address to get your publicly visible Gravatar profile picture (or a default image if you have not set up a Gravatar profile picture). Please go to ";
+    var gravatarTextAfter = Model.IsOrganization
+        ? " to change the profile picture for your organization."
+        : " to change your profile picture.";
+}
+<section id="profile-picture" class="account-section @(disabled ? "disabled" : null)" aria-disabled="@disabled">
+    <h2 id="profile-picture-section-header"><button type="button" class="account-section-toggle" data-toggle="collapse" data-target="#profile-picture-body" aria-controls="profile-picture-body" aria-expanded="false" disabled="@(disabled ? "disabled" : null)">Profile Picture @(Model.HasUnconfirmedEmailAddress ? "(preview)" : string.Empty)</button></h2>
+    <div id="profile-picture-body" class="collapse">
+        <div class="gravatar-image">
+            @* Explicit unported dependency: requires the application's original ViewHelpers.GravatarImage implementation. *@
+            @ViewHelpers.GravatarImage(Url, Model.CurrentEmailAddress, Model.AccountName, GalleryConstants.GravatarElementSize)
+        </div>
+        @if (Model.HasUnconfirmedEmailAddress)
+        { <p>@unconfirmedMessage</p> }
+        <p>@gravatarTextBefore<a href="http://www.gravatar.com" target="_blank">gravatar.com</a>@gravatarTextAfter</p>
+    </div>
+</section>

@@ -1,0 +1,15 @@
+// Copyright (c) .NET Foundation. All rights reserved.
+// Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
+
+namespace NuGet.Services.Validation;
+
+public static class EntitiesConfiguration
+{
+    private static readonly AsyncLocal<bool> _suspendExecutionStrategy = new();
+
+    public static bool SuspendExecutionStrategy
+    {
+        get => _suspendExecutionStrategy.Value;
+        set => _suspendExecutionStrategy.Value = value;
+    }
+}

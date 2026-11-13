@@ -1,0 +1,88 @@
+@model NuGetGallery.LogOnViewModel
+@inject NuGetGallery.Configuration.IGalleryConfigurationService Config
+@{
+    ViewData["Title"] = "Sign In";
+    ViewData["Tab"] = "Sign in";
+    ViewData["SmPageColumns"] = GalleryConstants.ColumnsAuthenticationSm;
+    ViewData["MdPageColumns"] = GalleryConstants.ColumnsAuthenticationMd;
+
+    var returnUrl = ViewData[GalleryConstants.ReturnUrlViewDataKey] as string;
+    var returnUrlMessage = ViewData[GalleryConstants.ReturnUrlMessageViewDataKey] as string;
+    var columnClasses = ViewHelpers.GetColumnClasses(ViewBag);
+}
+
+<section role="main" class="container main-container page-sign-in">
+    @if (!string.IsNullOrEmpty(returnUrlMessage))
+    {
+        <div class="row">
+            <div class="col-xs-12 text-center">
+                @ViewHelpers.AlertInfo(@<text>@returnUrlMessage</text>)
+            </div>
+        </div>
+    }
+
+    <div class="row">
+        <div class="col-xs-12 text-center">
+            <h1>Sign in</h1>
+        </div>
+    </div>
+    @if (Model.Providers.Any())
+    {
+        foreach (var provider in Model.Providers)
+        {
+            <div class="row">
+                <div class="@columnClasses text-center">
+                    <button type="button" class="btn btn-brand-secondary btn-block provider-button"
+                            onclick="window.location.href = '@Url.Action("Authenticate", "Authentication", new { provider = provider.ProviderName, returnUrl = returnUrl })'">
+                        @if (!string.IsNullOrEmpty(provider.UI.IconImagePath))
+                        {
+                            <img height="24" width="24" alt="" aria-hidden="true"
+                                 src="@Url.Content(provider.UI.IconImagePath)"
+                                 onerror="@(string.IsNullOrEmpty(provider.UI.IconImageFallbackPath) ? null : $"this.onerror=null;this.src='{Url.Content(provider.UI.IconImageFallbackPath)}';")" />
+                        }
+                        @provider.UI.SignInMessage
+                    </button>
+                </div>
+            </div>
+            <br />
+        }
+
+        <div class="row text-center create-provider-account">
+            <span>
+                <a href="#" id="signin-assistance">Need assistance signing in?</a>
+            </span>
+        </div>
+
+        @if (Model.IsNuGetAccountPasswordLoginEnabled)
+        {
+            <div class="row nuget-signin">
+                <div class="@columnClasses text-center">
+                    <p class="text-center">
+                        <a href="@Url.Action("LogOnNuGetAccount", "Authentication", new { returnUrl = returnUrl })">Sign in using NuGet.org account</a>
+                    </p>
+                </div>
+            </div>
+        }
+    }
+    else
+    {
+        <div class="row">
+            <div class="@columnClasses">
+                <partial name="_SignIn" model="Model" />
+            </div>
+        </div>
+    }
+</section>
+
+<div style="display: none" id="signinAssistanceModal" class="modal fade modal-container" data-backdrop="static">
+    <partial name="_SigninAssistance" />
+</div>
+
+@section Scripts {
+    <script type="text/javascript">
+        var signinAssistanceUrl = "@Url.Action("SigninAssistance", "Authentication")";
+        var strings_InvalidUsername = "@Html.Raw(Strings.SigninAssistance_InvalidUser)";
+    </script>
+    @Html.Raw(ViewHelpers.SectionsScript(this))
+    <script src="~/Scripts/gallery/page-signin.min.js" asp-append-version="true"></script>
+}

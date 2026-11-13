@@ -1,0 +1,50 @@
+@model AccountViewModel
+@{
+    var account = Model.User;
+    var confirmationLink = Model.IsOrganization
+        ? Url.OrganizationConfirmationRequired(account.Username)
+        : Url.ConfirmationRequired();
+    var showConfirmationLink = Model.IsOrganization
+        ? ((OrganizationAccountViewModel)Model).CanManage
+        : true;
+    var unconfirmedEmailMessage = Model.IsOrganization
+        ? "A new organization email address was recently registered: "
+        : "You recently registered a new email address: ";
+    var confirmNowLinkText = Model.IsOrganization ? "confirm your organization account" : "confirm your account";
+    var nonConfirmationText = Model.IsOrganization
+        ? "Your organization needs to be confirmed before you can upload any packages to it."
+        : "Your account needs to be confirmed before you can upload any packages.";
+}
+@if (Model.HasUnconfirmedEmailAddress && Model.HasConfirmedEmailAddress)
+{
+    <div class="alert alert-info" role="alert">
+        @unconfirmedEmailMessage<strong>@account.UnconfirmedEmailAddress</strong><br />
+        We will continue sending notification emails to the old verified email address (@account.EmailAddress)
+        until the
+        @if (Model.HasConfirmedEmailAddress)
+        {
+            if (showConfirmationLink)
+            { <a href="@confirmationLink">new email address is verified.</a> }
+            else
+            { <text>new email address is verified.</text> }
+        }
+        else
+        {
+            if (showConfirmationLink)
+            { <a href="@confirmationLink">email address has been verified.</a><br /> }
+            else
+            { <text>email address has been verified.</text><br /> }
+        }
+    </div>
+}
+@if (!account.Confirmed)
+{
+    if (showConfirmationLink)
+    {
+        <div class="alert alert-info" role="alert">Uploading packages requires that you <a href="@confirmationLink">@confirmNowLinkText</a>. Why not get that out of the way now?</div>
+    }
+    else
+    {
+        <div class="alert alert-info" role="alert">@nonConfirmationText</div>
+    }
+}

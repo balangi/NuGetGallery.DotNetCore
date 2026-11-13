@@ -1,0 +1,49 @@
+@model DeletePackagesRequest
+
+@Html.AntiForgeryToken()
+
+<div id="form-field-reason" class="form-group @(ViewData.ModelState[nameof(Model.Reason)]?.Errors.Count > 0 ? "input-validation-error" : null)">
+    <label asp-for="Reason"></label>
+    <select asp-for="Reason" asp-items="Model.ReasonChoices" class="select-brand">
+        <option value="">&lt;Choose a Reason&gt;</option>
+    </select>
+    <span asp-validation-for="Reason" class="field-validation-error"></span>
+</div>
+
+<div class="form-group @(ViewData.ModelState[nameof(Model.Signature)]?.Errors.Count > 0 ? "input-validation-error" : null)">
+    <label asp-for="Signature"></label>
+    <input asp-for="Signature" class="input-brand" />
+    <span asp-validation-for="Signature" class="field-validation-error"></span>
+</div>
+
+<div class="form-group">
+    <label class="brand-checkbox">
+        <input asp-for="SoftDelete" />
+        <span>@Html.DisplayNameFor(m => m.SoftDelete)</span>
+    </label>
+
+    <p>
+        This will prevent new packages with the same id and version from being pushed to the gallery. It also displays "Package was deleted" on the package details page, helping existing users of the package to identify it was deleted.
+    </p>
+</div>
+
+<div class="form-group" id="DeleteEmptyPackageRegistrationContainer" style="display: none;">
+    <label class="brand-checkbox">
+        <input asp-for="DeleteEmptyPackageRegistration" />
+        <span>@Html.DisplayNameFor(m => m.DeleteEmptyPackageRegistration)</span>
+    </label>
+
+    <p>
+        This will make the package id available again by removing the package registration. It's advised not to use this and leave the package registration intact, unless explicitly needed.
+    </p>
+</div>
+
+<hr />
+<p>
+    This action <strong>CANNOT</strong> be undone. This will permanently delete the package and make it unavailable for download and package restore!
+</p>
+<hr />
+
+<div class="form-group">
+    <input type="submit" class="btn btn-brand-danger form-control" value="I understand the consequences, delete this package" />
+</div>

@@ -1,0 +1,33 @@
+@model NuGetGallery.IPreviousNextPager
+
+<ul class="pager">
+    <li class="previous">
+        @if (Model.HasPreviousPage)
+        {
+            <a href="@Model.PreviousPageUrl" title="Go to the previous page.">Previous</a>
+        }
+        else
+        {
+            <text>Previous</text>
+        }
+    </li>
+    <li class="next">
+        @if (Model.HasNextPage)
+        {
+            <a href="@Model.NextPageUrl" title="Go to the next page.">Next</a>
+        }
+        else
+        {
+            <text>Next</text>
+        }
+    </li>
+</ul>
+
+
+*// نحوه فراخوانی در صفحات (Views):
+// <!-- روش Tag Helper استاندارد -->
+// <vc:pager pager="@Model.Pager" />
+// 
+// <!-- یا روش مرسوم HtmlHelper -->
+// @await Component.InvokeAsync("Pager", new { pager = Model.Pager })
+/*

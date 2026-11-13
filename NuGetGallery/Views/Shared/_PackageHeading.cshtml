@@ -1,0 +1,20 @@
+@model PackageHeadingModel
+
+@if (Model.ShowProfileBreadcrumb)
+{
+    <nav aria-label="Breadcrumb">
+        <ol class="breadcrumb">
+            <li><a href="@(Model.LinkIdOnly ? Url.Package(Model.Id) : Url.Package(Model.Id, Model.Version))">@Model.PackageDisplay</a></li>
+            <li aria-current="page">@Model.PageHeading</li>
+        </ol>
+    </nav>
+}
+else
+{
+    <nav aria-label="Breadcrumb">
+        <ol class="breadcrumb">
+            <li><a href="@(Model.LinkIdOnly ? Url.Package(Model.Id) : Url.Package(Model.Id, Model.Version))">@Model.PackageDisplay</a></li>
+            <li aria-current="page">@Model.PageHeading</li>
+        </ol>
+    </nav>
+}

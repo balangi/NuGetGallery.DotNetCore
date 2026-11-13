@@ -1,0 +1,22 @@
+@{
+    ViewData["Title"] = "Read-only Mode";
+    Context.Response.StatusCode = 503;
+}
+
+<div class="container error-page" role="main">
+    <div class="row">
+        <div class="col-md-8 col-md-offset-2">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <h1><span class="text-muted">503</span> Read-only Mode</h1>
+                </div>
+                <div class="panel-body">
+                    <p>We can't process the request right now because the site is temporarily in read-only mode. Please try again later!</p>
+                    <div class="alert alert-info" role="note">
+                        <p>You can still search and download packages while we address temporary technical problems.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

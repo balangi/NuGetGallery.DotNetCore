@@ -1,0 +1,56 @@
+@model CreateStagingGroupViewModel
+@{
+    ViewBag.Title = "Create Staging Group";
+    ViewBag.Tab = "Packages";
+    ViewBag.MdPageColumns = GalleryConstants.ColumnsFormMd;
+}
+
+<section role="main" class="container main-container page-manage-packages">
+    <div class="row">
+        <div class="@ViewHelpers.GetColumnClasses(ViewBag)">
+            <div class="breadcrumb-menu">
+                <div>
+                    <a class="staging-group-back-link" href="@Url.ManageMyStagingGroups()">
+                        <span aria-hidden="true" class="ms-Icon ms-Icon--ChevronLeft"></span>
+                        <span>Back to Staging Groups</span>
+                    </a>
+                </div>
+            </div>
+
+            <h1>Create Staging Group</h1>
+
+            <form method="post" action="@Url.Action("CreateGroup", "Staging")">
+                @Html.AntiForgeryToken()
+
+                <div class="form-group @(ViewData.ModelState[nameof(Model.Owner)]?.Errors.Count > 0 ? "has-error" : "")">
+                    <span class="required"><label asp-for="Owner"></label></span>
+                    <select asp-for="Owner" asp-items="@(new Microsoft.AspNetCore.Mvc.Rendering.SelectList(Model.Owners, Model.Owner))" class="form-control select-brand"></select>
+                    <span asp-validation-for="Owner" class="text-danger"></span>
+                </div>
+
+                <div class="form-group @(ViewData.ModelState[nameof(Model.Id)]?.Errors.Count > 0 ? "has-error" : "")">
+                    <span class="required"><label asp-for="Id"></label></span>
+                    <input asp-for="Id" class="form-control input-brand" />
+                    <span class="ms-font-s">The immutable ID used in URLs and command-line operations.</span>
+                    <span asp-validation-for="Id" class="text-danger"></span>
+                </div>
+
+                <div class="form-group @(ViewData.ModelState[nameof(Model.Name)]?.Errors.Count > 0 ? "has-error" : "")">
+                    <label asp-for="Name"></label>
+                    <input asp-for="Name" class="form-control input-brand" />
+                    <span class="ms-font-s">Optional. Defaults to the group ID.</span>
+                    <span asp-validation-for="Name" class="text-danger"></span>
+                </div>
+
+                <div class="form-group row">
+                    <div class="col-xs-6">
+                        <button type="submit" class="btn btn-brand form-control">Create group</button>
+                    </div>
+                    <div class="col-xs-6">
+                        <a class="btn btn-brand-secondary form-control" href="@Url.ManageMyStagingGroups()">Cancel</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</section>

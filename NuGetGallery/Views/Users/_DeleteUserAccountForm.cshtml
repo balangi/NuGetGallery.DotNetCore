@@ -1,0 +1,33 @@
+@model DeleteAccountAsAdminViewModel
+
+<div class="form-group danger-zone">
+    <form asp-controller="Users" asp-action="Delete" method="post" id="delete-form">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="_method" value="DELETE" />
+        <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
+        <div>
+            <div class="form-group">
+                <label asp-for="Signature"></label>
+                <input asp-for="Signature" type="text" class="form-control input-brand" />
+                <span asp-validation-for="Signature" class="text-danger"></span>
+            </div>
+            @if (Model.HasPackagesThatWillBeOrphaned)
+            {
+                <div class="form-group">
+                    <div class="row-checkbox-label">
+                        <input asp-for="ShouldUnlist" class="brand-checkbox" type="checkbox" />
+                        <label asp-for="ShouldUnlist"><b>Unlist the packages without any owner.</b></label>
+                    </div>
+                    <p>One or more packages do not have co-owners. If you choose to proceed without fixing this issue, these packages will be orphaned and a warning message will be displayed under owners on the package page.</p>
+                </div>
+            }
+        </div>
+        <hr />
+        <p>This action <strong>CANNOT</strong> be undone. This will permanently delete the account <b>@Model.AccountName</b>.</p>
+        <hr />
+        <input asp-for="Signature" type="hidden" />
+        <input asp-for="ShouldUnlist" type="hidden" />
+        <input asp-for="AccountName" type="hidden" />
+        <button id="btn-delete" type="submit" class="btn btn-brand-danger form-control" title="I understand the consequences, delete this account.">I understand the consequences, delete this account</button>
+    </form>
+</div>

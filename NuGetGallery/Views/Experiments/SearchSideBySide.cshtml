@@ -1,0 +1,286 @@
+@model NuGetGallery.SearchSideBySideViewModel
+@using Microsoft.AspNetCore.Mvc.ViewFeatures
+
+@{
+    ViewBag.Title = "Search Side by Side";
+    ViewBag.ShowSearchInNavbar = false;
+    ViewBag.AutofocusSearch = true;
+    ViewBag.SearchTerm = Model.SearchTerm;
+}
+
+<section role="main" class="main-container page-search-sxs">
+    <div class="container">
+        @if (Model.IsDisabled)
+        {
+            <div class="row">
+                <div class="col-xs-offset-3 col-xs-6 text-center">
+                    <div class="alert alert-warning" role="alert">
+                        The side-by-side search page is now <b>closed</b>.
+                        <br /><br />
+                        Thank you for trying out the side-by-side preview. The new and improved NuGet search
+                        is now <a href="@Url.PackageList()" class="@GalleryConstants.SearchFilterIds.PackagesLinkClass">live</a>! For details about the initial release, check out the
+                        <a href="https://devblogs.microsoft.com/nuget/new-and-improved-nuget-search/">blog post</a>.
+                        The old search results are no longer available.
+                        <br /><br />
+                        Keep an eye on <a href="https://twitter.com/nuget">Twitter</a> to hear about future search
+                        improvements that you can try out.
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="row">
+                <div class="col-xs-12">
+                    <h1>Step 1: enter a search query</h1>
+                    <section class="section page-section" id="instructions">
+                        <h2 class="section-heading">
+                            <button type="button" class="btn btn-link" data-toggle="collapse" data-target="#instructions-content" aria-expanded="false" aria-controls="instructions-content">
+                                Instructions
+                            </button>
+                        </h2>
+                        <div id="instructions-content" class="collapse">
+                            <p>
+                                Enter a search query below. The query will be sent to our existing search service ("old
+                                results") as well as to our new search implementation that is based on Azure Search ("new
+                                results").
+                            </p>
+                            <p>
+                                Once you provide a search query, take a look at the results and fill out the form below so
+                                that we can understand your thoughts on how the new results can be improved. We're still
+                                playing with how the search query is parsed and how relevant packages are ranked so any
+                                input you can provide is helpful!
+                            </p>
+                            <p>
+                                If you'd like us to be able to reach out to your concerning some feedback you have left,
+                                please leave your email address. We'll read all of your feedback whether it is anonymous
+                                or not and would be happy to start a conversation over email if you have more ideas or
+                                concerns that don't fit well in the little comment box below.
+                            </p>
+                            <p>
+                                If you're happy with the new results, we'd love to hear that too.
+                            </p>
+                            <p>
+                                A lot of ideas have already been voiced on the
+                                <a href="https://github.com/NuGet/NuGetGallery/issues/4124">Improve search on NuGet.org</a>
+                                GitHub issue but this side-by-side page is intended to help us gather even more feedback.
+                            </p>
+                        </div>
+                    </section>
+
+                    <form aria-label="Package search bar" action="@Url.SearchSideBySide()" method="get">
+                        <partial name="_SearchBar" />
+                    </form>
+                </div>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(Model.SearchTerm))
+            {
+                <div class="row">
+                    <div class="col-xs-12">
+                        <h1>Step 2: examine the search results</h1>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-xs-6">
+                        <div class="list-packages" role="list">
+                            <h2 class="text-center">Old results</h2>
+                            @{
+                                var oldItemIndex = 0;
+                            }
+                            @foreach (var package in Model.OldItems)
+                            {
+                                var rowViewData = new ViewDataDictionary(ViewData)
+                                {
+                                    ["eventName"] = "old-search-selection",
+                                    ["itemIndex"] = oldItemIndex,
+                                    ["showEditButton"] = false
+                                };
+                                <partial name="_ListPackage" model="package" view-data="rowViewData" />
+                                oldItemIndex++;
+                            }
+
+                            @if (!Model.OldSuccess)
+                            {
+                                <i>The old results could not be loaded.</i>
+                            }
+                            else if (!Model.OldItems.Any())
+                            {
+                                <i>No results.</i>
+                            }
+                        </div>
+                    </div>
+                    <div class="col-xs-6">
+                        <div class="list-packages" role="list">
+                            <h2 class="text-center">New results</h2>
+                            @{
+                                var newItemIndex = 0;
+                            }
+                            @foreach (var package in Model.NewItems)
+                            {
+                                var rowViewData = new ViewDataDictionary(ViewData)
+                                {
+                                    ["eventName"] = "new-search-selection",
+                                    ["itemIndex"] = newItemIndex,
+                                    ["showEditButton"] = false
+                                };
+                                <partial name="_ListPackage" model="package" view-data="rowViewData" />
+                                newItemIndex++;
+                            }
+
+                            @if (!Model.NewSuccess)
+                            {
+                                <i>The new results could not be loaded.</i>
+                            }
+                            else if (!Model.NewItems.Any())
+                            {
+                                <i>No results.</i>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                @if (Model.OldSuccess && Model.NewSuccess)
+                {
+                    <div class="row">
+                        <div class="col-xs-12">
+                            <h1>Step 3: provide feedback</h1>
+                            <p>All fields are optional, but please take some time to tell us your thoughts!</p>
+
+                            <form asp-controller="Experiments" asp-action="SearchSideBySide" method="post" asp-antiforgery="false">
+                                <fieldset class="form">
+                                    @Html.AntiForgeryToken()
+
+                                    <input asp-for="SearchTerm" type="hidden" />
+                                    <input asp-for="OldSuccess" type="hidden" />
+                                    <input asp-for="OldHits" type="hidden" />
+                                    <input asp-for="NewSuccess" type="hidden" />
+                                    <input asp-for="NewHits" type="hidden" />
+
+                                    <div class="form-group @(ViewData.ModelState.TryGetValue(nameof(Model.BetterSide), out var betterSideState) && betterSideState.Errors.Count > 0 ? "has-error" : string.Empty)">
+                                        <label asp-for="BetterSide"></label>
+                                        <div class="row-checkbox-label">
+                                            <label class="brand-radio">
+                                                <input type="radio" name="BetterSide" id="better-side-old" value="Old" />
+                                                <span>Old results</span>
+                                            </label>
+                                            <label class="brand-radio">
+                                                <input type="radio" name="BetterSide" id="better-side-new" value="New" />
+                                                <span>New results</span>
+                                            </label>
+                                            <label class="brand-radio">
+                                                <input type="radio" name="BetterSide" id="better-side-neither" value="Neither" />
+                                                <span>Neither</span>
+                                            </label>
+                                        </div>
+                                        <span asp-validation-for="BetterSide" class="text-danger"></span>
+                                    </div>
+                                    <div class="hidden form-group @(ViewData.ModelState.TryGetValue(nameof(Model.MostRelevantPackage), out var mostRelevantPackageState) && mostRelevantPackageState.Errors.Count > 0 ? "has-error" : string.Empty)" id="most-revelant-package">
+                                        <label asp-for="MostRelevantPackage"></label>
+                                        <input asp-for="MostRelevantPackage" placeholder="Package ID" class="input-brand" />
+                                        <span asp-validation-for="MostRelevantPackage" class="text-danger"></span>
+                                    </div>
+                                    <div class="hidden form-group @(ViewData.ModelState.TryGetValue(nameof(Model.ExpectedPackages), out var expectedPackagesState) && expectedPackagesState.Errors.Count > 0 ? "has-error" : string.Empty)" id="expected-packages">
+                                        <label asp-for="ExpectedPackages"></label>
+                                        <input asp-for="ExpectedPackages" placeholder="PackageA, PackageB" class="input-brand" />
+                                        <span asp-validation-for="ExpectedPackages" class="text-danger"></span>
+                                    </div>
+                                    <div class="form-group @(ViewData.ModelState.TryGetValue(nameof(Model.Comments), out var commentsState) && commentsState.Errors.Count > 0 ? "has-error" : string.Empty)">
+                                        <label asp-for="Comments"></label>
+                                        <textarea asp-for="Comments" rows="5" cols="50" class="textarea-brand"></textarea>
+                                        <span asp-validation-for="Comments" class="text-danger"></span>
+                                    </div>
+                                    <div class="form-group @(ViewData.ModelState.TryGetValue(nameof(Model.EmailAddress), out var emailAddressState) && emailAddressState.Errors.Count > 0 ? "has-error" : string.Empty)">
+                                        <label asp-for="EmailAddress"></label>
+                                        <input asp-for="EmailAddress" class="input-brand" />
+                                        <span asp-validation-for="EmailAddress" class="text-danger"></span>
+                                    </div>
+                                    <div class="form-group">
+                                        <input type="submit" class="btn btn-brand form-control" value="Submit feedback" title="Submit feedback" />
+                                    </div>
+                                </fieldset>
+                                <p>
+                                    Your data will be respected and protected. Please see the
+                                    <a href="https://privacy.microsoft.com/">Microsoft Privacy Statement</a> for more
+                                    information.
+                                </p>
+                            </form>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-danger" role="alert">Some of the search results could not be loaded. Please try again later.</div>
+                }
+            }
+        }
+    </div>
+</section>
+
+@section bottomScripts {
+    @if (!Model.IsDisabled)
+    {
+        <script type="text/javascript">
+            @if (!string.IsNullOrWhiteSpace(Model.SearchTerm))
+            {
+                // Emit an event representing the search page and the page index. This make it easier for the search selection
+                // event to be correlated in Google Analytics.
+                <text>
+                window.nuget.sendAnalyticsEvent('search-page', 'search-sxs-prerel', @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SearchTerm)), 0);
+                </text>
+            }
+
+            $(function () {
+                var $betterSideOld = $("#better-side-old");
+                var $betterSideNew = $("#better-side-new");
+                var $betterSideNeither = $("#better-side-neither");
+                var $mostRevelantPackage = $("#most-revelant-package");
+                var $mostRevelantPackageInput = $mostRevelantPackage.find("input");
+                var $expectedPackages = $("#expected-packages");
+                var $expectedPackagesInput = $expectedPackages.find("input");
+                var $emailAddress = $('#EmailAddress');
+
+                // Remember the email address provided the last time they submitted feedback.
+                var storage = window['localStorage'];
+                if (storage) {
+                    var key = 'search_sxs_email';
+                    var email = storage.getItem(key);
+                    if (email !== null) {
+                        $emailAddress.val(email);
+                    }
+
+                    $emailAddress.closest('form').submit(function () {
+                        storage.setItem(key, $emailAddress.val());
+                    });
+                }
+
+                var showHiddenInputs = function () {
+                    if ($betterSideOld.prop('checked') || $betterSideNew.prop('checked')) {
+                        $mostRevelantPackage.removeClass('hidden');
+                        $expectedPackages.addClass('hidden');
+
+                        // Reset the input names so only the visible field is submitted.
+                        $mostRevelantPackageInput.attr('name', 'MostRelevantPackage');
+                        $expectedPackagesInput.attr('name', '');
+                    }
+
+                    if ($betterSideNeither.prop('checked')) {
+                        $mostRevelantPackage.addClass('hidden');
+                        $mostRevelantPackageInput.attr('name', '');
+
+                        // Reset the input names so only the visible field is submitted.
+                        $expectedPackages.removeClass('hidden');
+                        $expectedPackagesInput.attr('name', 'ExpectedPackages');
+                    }
+                }
+
+                $("input[type=radio]").change(function () {
+                    showHiddenInputs();
+                });
+
+                // Run this logic once to catch any form state set by the browser (e.g. on back button press).
+                showHiddenInputs();
+            })
+        </script>
+    }
+}

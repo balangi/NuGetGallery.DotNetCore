@@ -1,0 +1,43 @@
+@{
+    ViewData["Title"] = "Page Not Found";
+    var errorPath = string.Empty;
+
+    if (Context.Request.Query.ContainsKey("aspxerrorpath"))
+    {
+        errorPath = Context.Request.Query["aspxerrorpath"].ToString();
+    }
+    else
+    {
+        errorPath = Context.Request.Path.ToString() + Context.Request.QueryString.ToString();
+    }
+
+    try
+    {
+        errorPath = System.IO.Path.GetFileNameWithoutExtension(errorPath);
+    }
+    catch (ArgumentException)
+    {
+        // seems we can't format the error path nicely...
+        errorPath = string.Empty;
+    }
+    Context.Response.StatusCode = 404;
+}
+
+<div class="container error-page" role="main">
+    <div class="row">
+        <div class="col-md-8 col-md-offset-2">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <h1><span class="text-muted">404</span> Page Not Found</h1>
+                </div>
+                <div class="panel-body">
+                    <p>Looks like you might have gotten lost. Let's see if we can help you find your way!</p>
+                    @if (!string.IsNullOrEmpty(errorPath))
+                    {
+                        <p class="text-muted">@errorPath</p>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

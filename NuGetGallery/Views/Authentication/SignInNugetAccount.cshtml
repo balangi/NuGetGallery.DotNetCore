@@ -1,0 +1,31 @@
+@model NuGetGallery.LogOnViewModel
+@inject NuGetGallery.Configuration.IGalleryConfigurationService Config
+@{
+    ViewData["Title"] = "Sign In";
+    ViewData["Tab"] = "Sign in";
+    ViewData["SmPageColumns"] = GalleryConstants.ColumnsAuthenticationSm;
+    ViewData["MdPageColumns"] = GalleryConstants.ColumnsAuthenticationMd;
+    ViewData["BlockSearchEngineIndexing"] = true;
+    var columnClasses = ViewHelpers.GetColumnClasses(ViewBag);
+}
+
+<section role="main" class="container main-container page-sign-in">
+    @if (Config.Current.DeprecateNuGetPasswordLogins)
+    {
+        <div class="deprecate-alert text-center">
+            @ViewHelpers.AlertPasswordDeprecation()
+        </div>
+    }
+
+    <div class="row">
+        <div class="col-xs-12 text-center">
+            <h1>Sign in</h1>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="@columnClasses">
+            <partial name="_SignIn" model="Model" />
+        </div>
+    </div>
+</section>

@@ -1,0 +1,48 @@
+@model AccountViewModel
+@{
+    var controllerName = Model.IsOrganization ? "Organizations" : "Users";
+    var sectionDisabled = !Model.CanManage;
+}
+<section id="change-email" class="account-section @(sectionDisabled ? "disabled" : null)" aria-disabled="@sectionDisabled">
+    <h2 id="change-email-section-header">
+        <button type="button" class="account-section-toggle" data-toggle="collapse" data-target="#change-email-body" aria-controls="change-email-body" aria-expanded="false" disabled="@(sectionDisabled ? "disabled" : null)">@(Model.HasUnconfirmedEmailAddress ? "Pending Email Address" : "Email Address")</button>
+    </h2>
+    <div id="change-email-body" class="collapse">
+        <p>@Model.CurrentEmailAddress</p>
+        @if (Model.HasConfirmedEmailAddress && Model.HasUnconfirmedEmailAddress)
+        {
+            <form method="post" action="@Url.Action("CancelChangeEmail", controllerName)">
+                @Html.AntiForgeryToken()
+                <div class="row">
+                    <div class="col-sm-6"><input type="submit" class="btn btn-brand form-control" value="Reset to Confirmed Email Address" /></div>
+                    <div class="col-sm-6"><button type="button" class="btn btn-brand-secondary form-control" id="cancel-change-email">Cancel</button></div>
+                </div>
+            </form>
+        }
+        else
+        {
+            <form method="post" action="@Url.Action("ChangeEmail", controllerName)">
+                @Html.AntiForgeryToken()
+                <fieldset disabled="@(sectionDisabled ? "disabled" : null)">
+                    @if (Model.HasPassword)
+                    {
+                        <div class="form-group">
+                            <label asp-for="ChangeEmail.Password"></label>
+                            <input asp-for="ChangeEmail.Password" type="password" class="form-control input-brand" />
+                            <span asp-validation-for="ChangeEmail.Password" class="text-danger"></span>
+                        </div>
+                    }
+                    <div class="form-group">
+                        <label asp-for="ChangeEmail.NewEmail"></label>
+                        <input asp-for="ChangeEmail.NewEmail" class="form-control input-brand" />
+                        <span asp-validation-for="ChangeEmail.NewEmail" class="text-danger"></span>
+                    </div>
+                    <div class="row">
+                        <div class="col-sm-6"><input type="submit" class="btn btn-brand form-control" value="Save" /></div>
+                        <div class="col-sm-6"><button type="button" class="btn btn-brand-secondary form-control" id="cancel-change-email">Cancel</button></div>
+                    </div>
+                </fieldset>
+            </form>
+        }
+    </div>
+</section>

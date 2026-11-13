@@ -1,0 +1,36 @@
+@using NuGetGallery
+@{
+    ViewData["Title"] = "Internal Server Error";
+    Context.Response.StatusCode = 500;
+}
+
+@if (StringComparer.OrdinalIgnoreCase.Equals(Context.Request.Path.Value, "/pages/simulate-error")
+     && StringComparer.OrdinalIgnoreCase.Equals(Context.Request.Query["type"].ToString(), SimulatedErrorType.ExceptionInInlineErrorPage.ToString()))
+{
+    throw SimulatedErrorType.ExceptionInInlineErrorPage.MapToException();
+}
+
+@if (StringComparer.OrdinalIgnoreCase.Equals(Context.Request.Path.Value, "/Errors/500")
+     && Context.Request.Cookies.ContainsKey("simulatedErrorType")
+     && StringComparer.OrdinalIgnoreCase.Equals(Context.Request.Cookies["simulatedErrorType"], SimulatedErrorType.ExceptionInDedicatedErrorPage.ToString()))
+{
+    throw SimulatedErrorType.ExceptionInDedicatedErrorPage.MapToException();
+}
+
+<div class="container error-page" role="main">
+    <div class="row">
+        <div class="col-md-8 col-md-offset-2">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <h1><span class="text-muted">500</span> Internal Server Error</h1>
+                </div>
+                <div class="panel-body">
+                    <p>An error occurred while processing your request. We really messed up this time...</p>
+                    <div class="alert alert-info" role="note">
+                        <p>We have logged the error and will look into it so that it doesn't happen again; however, if you keep seeing this page, please <a href="https://github.com/NuGet/NuGetGallery/issues">file a bug!</a></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

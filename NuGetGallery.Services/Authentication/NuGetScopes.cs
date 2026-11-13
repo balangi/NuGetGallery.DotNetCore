@@ -1,0 +1,41 @@
+// Copyright (c) .NET Foundation. All rights reserved.
+// Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
+
+using System.Collections;
+using System.Collections.Generic;
+
+namespace NuGetGallery.Authentication
+{
+    public static class NuGetScopes
+    {
+        public const string All = "all";
+        public const string PackagePushVersion = "package:pushversion";
+        public const string PackagePush = "package:push";
+        public const string PackageUnlist = "package:unlist";
+        public const string PackageStage = "package:stage";
+        public const string PackageVerify = "package:verify";
+
+        public static readonly IList<string> ListOfScopes = [ All, PackagePushVersion, PackagePush, PackageUnlist, PackageStage, PackageVerify ];
+
+        public static string Describe(string scope, bool isDeprecateApiEnabled)
+        {
+            switch (scope.ToLowerInvariant())
+            {
+                case All:
+                    return ServicesStrings.ScopeDescription_All;
+                case PackagePush:
+                    return ServicesStrings.ScopeDescription_PushPackage;
+                case PackagePushVersion:
+                    return ServicesStrings.ScopeDescription_PushPackageVersion;
+                case PackageUnlist:
+                    return isDeprecateApiEnabled ? ServicesStrings.ScopeDescription_UnlistDeprecatePackage : ServicesStrings.ScopeDescription_UnlistPackage;
+                case PackageStage:
+                    return ServicesStrings.ScopeDescription_StagePackage;
+                case PackageVerify:
+                    return ServicesStrings.ScopeDescription_VerifyPackage;
+            }
+
+            return ServicesStrings.ScopeDescription_Unknown;
+        }
+    }
+}

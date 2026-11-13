@@ -1,0 +1,54 @@
+@model NuGetGallery.ViewModels.AccordionBarViewModel
+
+<li id="@Model.ItemId" class="accordion-item @(Model.Enabled ? "accordion-item-enabled" : "accordion-item-disabled")">
+    <div class="accordion-item-header">
+        @if (Model.Actions != null)
+        {
+            <div class="accordion-item-actions" id="@Model.ActionsId">
+                @Model.Actions
+            </div>
+        }
+        <span class="accordion-item-title">
+            @Model.Title
+        </span>
+        @if (Model.Subtitle != null)
+        {
+            <span class="accordion-item-subtitle">
+                @Model.Subtitle
+            </span>
+        }
+    </div>
+    @if (Model.Content != null)
+    {
+        <div id="@Model.ContentDropDownId" class="accordion-item-content @Model.ContentHiddenClass">
+            @Model.Content
+        </div>
+    }
+</li>
+
+
+*/ نحوه فراخوانی در صفحات (Views):
+اگر محتوای متنی ساده باشد:
+<vc:accordion group-name="package-settings"
+              title="API Keys"
+              subtitle="Manage your push keys"
+              enabled="true"
+              expanded="false" />
+
+اگر داخل آن تکه کدهای Razor و HTML پیچیده باشد:
+@{
+    var actionsHtml = @<button class="btn btn-sm btn-danger">Delete</button>;
+    var contentHtml = @<div>
+        <p>This is the package configuration details.</p>
+        <input type="text" name="packageKey" class="form-control" />
+    </div>;
+}
+
+@await Component.InvokeAsync("Accordion", new {
+    groupName = "package-details",
+    title = "Advanced Options",
+    actions = actionsHtml,
+    content = contentHtml,
+    enabled = true,
+    expanded = true
+})/*

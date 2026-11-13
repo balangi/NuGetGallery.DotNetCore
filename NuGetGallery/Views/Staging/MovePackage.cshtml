@@ -1,0 +1,45 @@
+@model MoveStagedPackageViewModel
+@{
+    ViewBag.Title = "Move Staged Package";
+    ViewBag.Tab = "Packages";
+    ViewBag.MdPageColumns = GalleryConstants.ColumnsFormMd;
+}
+
+<section role="main" class="container main-container page-manage-packages">
+    <div class="row">
+        <div class="@ViewHelpers.GetColumnClasses(ViewBag)">
+            <div class="breadcrumb-menu">
+                <div>
+                    <a class="staging-group-back-link" href="@Url.ManageMyPackages()">
+                        <span aria-hidden="true" class="ms-Icon ms-Icon--ChevronLeft"></span>
+                        <span>Back to Staging Groups</span>
+                    </a>
+                </div>
+            </div>
+
+            <h1>Move Staged Package</h1>
+            <p>Move <strong>@Model.Id @Model.Version</strong> to another staging group or to Ungrouped.</p>
+            <p class="text-muted">The staged package and its symbols move together.</p>
+
+            <form method="post" action="@Url.Action("MovePackage", "Staging", new { owner = Model.Owner, id = Model.Id, version = Model.Version })">
+                @Html.AntiForgeryToken()
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                <div class="form-group @(ViewData.ModelState[nameof(Model.GroupId)]?.Errors.Count > 0 ? "has-error" : "")">
+                    <label asp-for="GroupId">Group</label>
+                    <select asp-for="GroupId" asp-items="@(new Microsoft.AspNetCore.Mvc.Rendering.SelectList(Model.Groups, "Id", "Name", Model.GroupId))" class="form-control select-brand staging-move-group-select"></select>
+                    <span asp-validation-for="GroupId" class="text-danger"></span>
+                </div>
+
+                <div class="form-group row">
+                    <div class="col-xs-6">
+                        <button type="submit" class="btn btn-brand form-control">Move</button>
+                    </div>
+                    <div class="col-xs-6">
+                        <a class="btn btn-brand-secondary form-control" href="@Url.ManageMyPackages()">Cancel</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</section>

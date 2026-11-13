@@ -1,0 +1,19 @@
+@model AccountViewModel
+<section id="change-theme" class="account-section">
+    <h2 id="change-theme-section-header"><button type="button" class="account-section-toggle" data-toggle="collapse" data-target="#change-theme-body" aria-controls="change-theme-body" aria-expanded="false">Theme</button></h2>
+    <div id="change-theme-body" class="collapse">
+        <p id="user-prefered-theme"></p>
+        <form method="post" action="@Url.Action("ChangeTheme")">
+            @Html.AntiForgeryToken()
+            <div class="row">
+                <div class="col-sm-6 col-md-4">
+                    <select id="select-option-theme" class="form-control select-brand" name="selectTheme" aria-label="Select Theme">
+                        <option value="system" id="option-theme-system">System</option>
+                        <option value="light" id="option-theme-light">Light</option>
+                        <option value="dark" id="option-theme-dark">Dark</option>
+                    </select>
+                </div>
+            </div>
+        </form>
+    </div>
+</section>

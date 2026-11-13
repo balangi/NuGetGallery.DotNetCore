@@ -1,0 +1,62 @@
+@model AddOrganizationViewModel
+@{
+    ViewData["Title"] = "Add Organization";
+    var gravatarId = "gravatar-image";
+    var emailBoxGroupId = "email-box-group";
+    var organizationNameTextGroupId = "organization-name";
+    var organizationNameTextId = "organization-name-text";
+    var errorMessage = TempData["AddOrganizationErrorMessage"] as string;
+}
+
+<section role="main" class="container main-container page-add-organization">
+    <div class="row">
+        <div class="col-md-8 col-md-offset-2">
+            <nav aria-label="breadcrumb"><ol class="breadcrumb"><li><a asp-controller="Organizations" asp-action="ManageMyOrganizations">Organizations</a></li><li class="active" aria-current="page">Add</li></ol></nav>
+            <p>Organizations allow you to manage and publish packages as a team or a group. <a href="https://go.microsoft.com/fwlink/?linkid=870439" aria-label="Learn more about organizations on NuGet.Org">Learn more.</a></p>
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-danger" role="alert">@errorMessage</div>
+            }
+            <div>
+                <aside class="col-sm-3 col-sm-push-9">
+                    <b>Logo</b>
+                    <img class="package-icon img-responsive owner-image package-default-icon" height="332" id="gravatar-image" width="332" alt="gravatar" title="Organization logo" aria-label="Organization logo" />
+                    <p class="ms-font-s">We use the organization's name and its verified email address to get its publicly visible Gravatar profile picture (or a default image if it does not have a Gravatar profile picture). Please go to gravatar.com to change the profile picture for your organization.</p>
+                </aside>
+                <div class="col-sm-6 col-sm-pull-3">
+                    <form asp-controller="Organizations" asp-action="Add" method="post">
+                        @Html.AntiForgeryToken()
+                        <div class="form-group" id="@organizationNameTextGroupId">
+                            <label asp-for="OrganizationName" class="required"></label>
+                            <input asp-for="OrganizationName" class="form-control input-brand" />
+                            <span class="ms-font-s">This will be your organization account on <i id="@organizationNameTextId">@Url.Action("Profile", "Users", new { username = "{username}" })</i>.</span>
+                            <span asp-validation-for="OrganizationName" class="text-danger"></span>
+                        </div>
+                        <div class="form-group" id="@emailBoxGroupId">
+                            <label asp-for="OrganizationEmailAddress" class="required"></label>
+                            <input asp-for="OrganizationEmailAddress" class="form-control input-brand" />
+                            <span class="ms-font-s">Users can contact your organization at this email address.</span>
+                            <span asp-validation-for="OrganizationEmailAddress" class="text-danger"></span>
+                        </div>
+                        <div class="form-group row">
+                            <div class="col-xs-6"><input type="submit" class="btn btn-brand form-control" value="Add" /></div>
+                            <div class="col-xs-6"><button type="button" onclick="window.location.href = '@Url.Action("ManageMyOrganizations", "Organizations")'" class="btn btn-brand-secondary form-control">Cancel</button></div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@section BottomScripts {
+    <script type="text/javascript">
+        var gravatarId = @System.Text.Json.JsonSerializer.Serialize(gravatarId);
+        var emailBoxGroupId = @System.Text.Json.JsonSerializer.Serialize(emailBoxGroupId);
+        var organizationNameTextGroupId = @System.Text.Json.JsonSerializer.Serialize(organizationNameTextGroupId);
+        var organizationNameTextId = @System.Text.Json.JsonSerializer.Serialize(organizationNameTextId);
+        var defaultImage = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Url.Content("~/Content/gallery/img/default-package-icon-256x256.png")));
+        var emailValidationRegex = new RegExp(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(GalleryConstants.EmailValidationRegex)));
+    </script>
+    <script src="~/Scripts/gallery/page-add-organization.min.js" asp-append-version="true"></script>
+}

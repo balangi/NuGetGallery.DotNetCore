@@ -1,0 +1,22 @@
+@{
+    ViewData["Title"] = "Invalid Request";
+    Context.Response.StatusCode = 400;
+}
+
+<div class="container error-page" role="main">
+    <div class="row">
+        <div class="col-md-8 col-md-offset-2">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <h1><span class="text-muted">400</span> Invalid Request</h1>
+                </div>
+                <div class="panel-body">
+                    <p>We can't process your request because it was invalid.</p>
+                    <div class="alert alert-info" role="note">
+                        <p>You've probably disabled cookies in your browser. Please enable cookies in your browser settings and try again.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
