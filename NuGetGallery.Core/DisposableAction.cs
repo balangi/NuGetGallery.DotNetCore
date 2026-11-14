@@ -1,56 +1,51 @@
 // Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
+namespace NuGetGallery;
 
-namespace NuGetGallery
+public sealed class DisposableAction : IDisposable
 {
-    public sealed class DisposableAction : IDisposable
+    public static readonly DisposableAction NoOp = new DisposableAction(() => { });
+
+    private readonly Action _action;
+
+    public DisposableAction(Action action)
     {
-        public static readonly DisposableAction NoOp = new DisposableAction(() => { });
+        _action = action;
+    }
 
-        private readonly Action _action;
-
-        public DisposableAction(Action action)
+    public static IDisposable All(params IDisposable[] tokens)
+    {
+        return new DisposableAction(() =>
         {
-            _action = action;
-        }
+            var exceptions = new List<Exception>();
 
-        public static IDisposable All(params IDisposable[] tokens)
-        {
-            return new DisposableAction(() =>
+            foreach (var token in tokens)
             {
-                var exceptions = new List<Exception>();
-
-                foreach (var token in tokens)
+                try
                 {
-                    try
-                    {
-                        token.Dispose();
-                    }
-                    catch (Exception ex)
-                    {
-                        exceptions.Add(ex);
-                    }
+                    token.Dispose();
                 }
-
-                if (exceptions.Any())
+                catch (Exception ex)
                 {
-                    throw new AggregateException(exceptions);
+                    exceptions.Add(ex);
                 }
-            });
-        }
+            }
 
-        public static IDisposable All(IEnumerable<IDisposable> tokens)
-        {
-            return All(tokens.ToArray());
-        }
+            if (exceptions.Any())
+            {
+                throw new AggregateException(exceptions);
+            }
+        });
+    }
 
-        public void Dispose()
-        {
-            _action();
-        }
+    public static IDisposable All(IEnumerable<IDisposable> tokens)
+    {
+        return All(tokens.ToArray());
+    }
+
+    public void Dispose()
+    {
+        _action();
     }
 }

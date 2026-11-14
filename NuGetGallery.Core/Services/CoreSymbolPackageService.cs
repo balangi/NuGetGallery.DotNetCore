@@ -1,55 +1,51 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 using NuGet.Services.Entities;
 
-namespace NuGetGallery
+namespace NuGetGallery;
+
+public class CoreSymbolPackageService : ICoreSymbolPackageService
 {
-    public class CoreSymbolPackageService : ICoreSymbolPackageService
+    protected readonly IEntityRepository<SymbolPackage> _symbolPackageRepository;
+    protected readonly ICorePackageService _corePackageService;
+
+    public CoreSymbolPackageService(
+        IEntityRepository<SymbolPackage> symbolPackageRepository,
+        ICorePackageService corePackageService)
     {
-        protected readonly IEntityRepository<SymbolPackage> _symbolPackageRepository;
-        protected readonly ICorePackageService _corePackageService;
+        _symbolPackageRepository = symbolPackageRepository ?? throw new ArgumentNullException(nameof(symbolPackageRepository));
+        _corePackageService = corePackageService ?? throw new ArgumentNullException(nameof(corePackageService));
+    }
 
-        public CoreSymbolPackageService(
-            IEntityRepository<SymbolPackage> symbolPackageRepository,
-            ICorePackageService corePackageService)
+    public IEnumerable<SymbolPackage> FindSymbolPackagesByIdAndVersion(string id, string version)
+    {
+        var package = _corePackageService.FindPackageByIdAndVersionStrict(id, version);
+
+        return package?.SymbolPackages;
+    }
+
+    public virtual async Task UpdateStatusAsync(SymbolPackage symbolPackage, PackageStatus newPackageStatus, bool commitChanges = true)
+    {
+        if (symbolPackage == null)
         {
-            _symbolPackageRepository = symbolPackageRepository ?? throw new ArgumentNullException(nameof(symbolPackageRepository));
-            _corePackageService = corePackageService ?? throw new ArgumentNullException(nameof(corePackageService));
+            throw new ArgumentNullException(nameof(symbolPackage));
         }
 
-        public IEnumerable<SymbolPackage> FindSymbolPackagesByIdAndVersion(string id, string version)
+        // Avoid all of this work if the package status is not changing.
+        if (symbolPackage.StatusKey != newPackageStatus)
         {
-            var package = _corePackageService.FindPackageByIdAndVersionStrict(id, version);
+            symbolPackage.StatusKey = newPackageStatus;
 
-            return package?.SymbolPackages;
-        }
-
-        public virtual async Task UpdateStatusAsync(SymbolPackage symbolPackage, PackageStatus newPackageStatus, bool commitChanges = true)
-        {
-            if (symbolPackage == null)
+            /// If the package is being made available.
+            if (newPackageStatus == PackageStatus.Available)
             {
-                throw new ArgumentNullException(nameof(symbolPackage));
+                symbolPackage.Published = DateTime.UtcNow;
             }
 
-            // Avoid all of this work if the package status is not changing.
-            if (symbolPackage.StatusKey != newPackageStatus)
+            if (commitChanges)
             {
-                symbolPackage.StatusKey = newPackageStatus;
-
-                /// If the package is being made available.
-                if (newPackageStatus == PackageStatus.Available)
-                {
-                    symbolPackage.Published = DateTime.UtcNow;
-                }
-
-                if (commitChanges)
-                {
-                    await _symbolPackageRepository.CommitChangesAsync();
-                }
+                await _symbolPackageRepository.CommitChangesAsync();
             }
         }
     }

@@ -1,11 +1,10 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
-namespace NuGetGallery
+namespace NuGetGallery;
+
+public interface ICloudBlobCopyState
 {
-    public interface ICloudBlobCopyState
-    {
-        CloudBlobCopyStatus Status { get; }
-        string StatusDescription { get; }
-    }
+    CloudBlobCopyStatus Status { get; }
+    string StatusDescription { get; }
 }

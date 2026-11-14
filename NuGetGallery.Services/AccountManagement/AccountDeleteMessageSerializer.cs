@@ -3,40 +3,39 @@
 
 using NuGet.Services.ServiceBus;
 
-namespace NuGetGallery
+namespace NuGetGallery;
+
+public class AccountDeleteMessageSerializer : IBrokeredMessageSerializer<AccountDeleteMessage>
 {
-    public class AccountDeleteMessageSerializer : IBrokeredMessageSerializer<AccountDeleteMessage>
+    public const string AccountDeleteMessageDataSchema = nameof(AccountDeleteMessageData);
+
+    private IBrokeredMessageSerializer<AccountDeleteMessageData> _serializer = new BrokeredMessageSerializer<AccountDeleteMessageData>();
+
+    public AccountDeleteMessage Deserialize(IReceivedBrokeredMessage brokeredMessage)
     {
-        public const string AccountDeleteMessageDataSchema = nameof(AccountDeleteMessageData);
+        var message = _serializer.Deserialize(brokeredMessage);
 
-        private IBrokeredMessageSerializer<AccountDeleteMessageData> _serializer = new BrokeredMessageSerializer<AccountDeleteMessageData>();
+        return new AccountDeleteMessage(
+            message.Username, 
+            message.Source);
+    }
 
-        public AccountDeleteMessage Deserialize(IReceivedBrokeredMessage brokeredMessage)
+    public IBrokeredMessage Serialize(AccountDeleteMessage message)
+    {
+        return _serializer.Serialize(new AccountDeleteMessageData
         {
-            var message = _serializer.Deserialize(brokeredMessage);
+            Username = message.Username,
+            Source = message.Source
+        });
+    }
 
-            return new AccountDeleteMessage(
-                message.Username, 
-                message.Source);
-        }
+    [Schema(Name = AccountDeleteMessageDataSchema, Version = 1)]
+    private struct AccountDeleteMessageData
+    {
+        public string Username { get; set; }
 
-        public IBrokeredMessage Serialize(AccountDeleteMessage message)
-        {
-            return _serializer.Serialize(new AccountDeleteMessageData
-            {
-                Username = message.Username,
-                Source = message.Source
-            });
-        }
-
-        [Schema(Name = AccountDeleteMessageDataSchema, Version = 1)]
-        private struct AccountDeleteMessageData
-        {
-            public string Username { get; set; }
-
-            // This defines the origin of the outgoing message.
-            // This source must be defined in the AccountDeleter configuration, or it will refuse to process the message.
-            public string Source { get; set; }
-        }
+        // This defines the origin of the outgoing message.
+        // This source must be defined in the AccountDeleter configuration, or it will refuse to process the message.
+        public string Source { get; set; }
     }
 }

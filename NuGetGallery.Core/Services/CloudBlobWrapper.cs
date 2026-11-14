@@ -493,7 +493,7 @@ public class CloudBlobWrapper : ISimpleCloudBlob
         }
         return propertiesResponse;
     }
-    
+
     private Response<BlobContentInfo> UpdateEtag(Response<BlobContentInfo> infoResponse)
     {
         if (infoResponse?.Value != null)
@@ -549,7 +549,10 @@ public class CloudBlobWrapper : ISimpleCloudBlob
 
     private async Task<string> GenerateDelegationSasAsync(BlobSasBuilder sasBuilder)
     {
-        UserDelegationKey userDelegationKey = (await _container.Account.Client.GetUserDelegationKeyAsync(sasBuilder.StartsOn, sasBuilder.ExpiresOn)).Value;
+        UserDelegationKey userDelegationKey = (await _container.Account.Client.GetUserDelegationKeyAsync(
+            sasBuilder.StartsOn,
+            sasBuilder.ExpiresOn,
+            default)).Value; // اضافه کردن CancellationToken
         BlobUriBuilder blobUriBuilder = new BlobUriBuilder(_blob.Uri)
         {
             Sas = sasBuilder.ToSasQueryParameters(userDelegationKey, _blob.AccountName),

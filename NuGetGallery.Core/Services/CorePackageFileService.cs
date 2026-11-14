@@ -1,6 +1,7 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
+using Microsoft.AspNetCore.WebUtilities;
 using NuGet.Services.Entities;
 using NuGet.Versioning;
 using System.Globalization;
@@ -225,7 +226,7 @@ public class CorePackageFileService : ICorePackageFileService
             fileBackupSavePathTemplate,
             id.ToLowerInvariant(),
             version.ToLowerInvariant(),
-            HttpServerUtility.UrlTokenEncode(hashBytes),
+            WebEncoders.Base64UrlEncode(hashBytes),
             extension);
     }
 }

@@ -3,7 +3,7 @@
 
 using System;
 using System.Data.Common;
-using System.Data.Entity;
+using Microsoft.EntityFrameworkCore;
 using System.Data.Entity.Infrastructure;
 using System.Threading.Tasks;
 

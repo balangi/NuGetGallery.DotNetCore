@@ -3,16 +3,15 @@
 
 using NuGet.Packaging;
 
-namespace NuGetGallery
+namespace NuGetGallery;
+
+/// <summary>
+/// Utilities extending PackageArchiveReader
+/// </summary>
+public static class PackageArchiveReaderExtensions
 {
-    /// <summary>
-    /// Utilities extending PackageArchiveReader
-    /// </summary>
-    public static class PackageArchiveReaderExtensions
+    public static NuspecReader GetNuspecReader(this PackageArchiveReader packageArchiveReader)
     {
-        public static NuspecReader GetNuspecReader(this PackageArchiveReader packageArchiveReader)
-        {
-            return new NuspecReader(packageArchiveReader.GetNuspec());
-        }
+        return new NuspecReader(packageArchiveReader.GetNuspec());
     }
 }

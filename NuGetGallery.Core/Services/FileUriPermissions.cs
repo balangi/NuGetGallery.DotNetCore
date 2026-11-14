@@ -1,32 +1,29 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
-using System;
+namespace NuGetGallery;
 
-namespace NuGetGallery
+/// <summary>
+/// A copy of <see cref="Microsoft.WindowsAzure.Storage.Blob.SharedAccessBlobPermissions"/> so that the caller
+/// does not need a direct dependency on the WindowsAzure.Storage package.
+/// </summary>
+[Flags]
+public enum FileUriPermissions
 {
-    /// <summary>
-    /// A copy of <see cref="Microsoft.WindowsAzure.Storage.Blob.SharedAccessBlobPermissions"/> so that the caller
-    /// does not need a direct dependency on the WindowsAzure.Storage package.
-    /// </summary>
-    [Flags]
-    public enum FileUriPermissions
-    {
-        [Obsolete]
-        None = 0,
+    [Obsolete]
+    None = 0,
 
-        Read = 1,
+    Read = 1,
 
-        Write = 2,
+    Write = 2,
 
-        Delete = 4,
+    Delete = 4,
 
-        [Obsolete]
-        List = 8,
+    [Obsolete]
+    List = 8,
 
-        [Obsolete]
-        Add = 16,
+    [Obsolete]
+    Add = 16,
 
-        Create = 32,
-    }
+    Create = 32,
 }

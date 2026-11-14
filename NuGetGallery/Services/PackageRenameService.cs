@@ -3,7 +3,7 @@
 
 using System;
 using System.Linq;
-using System.Data.Entity;
+using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 using NuGet.Services.Entities;
 
