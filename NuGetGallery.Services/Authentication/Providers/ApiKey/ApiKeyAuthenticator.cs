@@ -4,20 +4,19 @@
 using NuGetGallery.Configuration;
 using Owin;
 
-namespace NuGetGallery.Authentication.Providers.ApiKey
+namespace NuGetGallery.Authentication.Providers.ApiKey;
+
+public class ApiKeyAuthenticator : Authenticator<ApiKeyAuthenticatorConfiguration>
 {
-    public class ApiKeyAuthenticator : Authenticator<ApiKeyAuthenticatorConfiguration>
+    protected override void AttachToOwinApp(IGalleryConfigurationService config, IAppBuilder app)
     {
-        protected override void AttachToOwinApp(IGalleryConfigurationService config, IAppBuilder app)
+        app.Map("/api", api =>
         {
-            app.Map("/api", api =>
+            api.UseApiKeyAuthentication(new ApiKeyAuthenticationOptions
             {
-                api.UseApiKeyAuthentication(new ApiKeyAuthenticationOptions
-                {
-                    ApiKeyHeaderName = Config.HeaderName,
-                    ApiKeyClaim = Config.Claim
-                });
+                ApiKeyHeaderName = Config.HeaderName,
+                ApiKeyClaim = Config.Claim
             });
-        }
+        });
     }
 }
