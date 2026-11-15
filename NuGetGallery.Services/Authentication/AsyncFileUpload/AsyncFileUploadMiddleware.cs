@@ -1,6 +1,12 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
+using System;
+using System.Collections.Specialized;
+using System.IO;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using NuGetGallery.Helpers;
@@ -33,13 +39,19 @@ public class AsyncFileUploadMiddleware
             return;
         }
 
-        var progress = new AsyncFileUploadProgress(context.Request.ContentLength ?? 0);
+        // ۱. حل خطای long به int: کست ایمن با در نظر گرفتن حد سقف int.MaxValue
+        var contentLengthLong = context.Request.ContentLength ?? 0;
+        var safeContentLength = (int)Math.Min(contentLengthLong, int.MaxValue);
+
+        var progress = new AsyncFileUploadProgress(safeContentLength);
         _cacheService.SetProgress(uploadKey, progress);
 
-        // Buffering لازم است تا بدنه هم برای پایش و هم برای کنترلر قابل خواندن باشد.
+        // فعال‌سازی Buffering تا بدنه برای مراحل و اکشن‌های بعدی بازخوانی‌پذیر باشد
         context.Request.EnableBuffering();
 
-        var requestParser = new AsyncFileUploadRequestParser(boundary, context.Request.ContentType);
+        // ۲. حل خطای string به Encoding: استخراج انکودینگ از هدر یا استفاده از UTF8 به عنوان پیش‌فرض
+        var requestEncoding = GetRequestEncoding(context.Request.ContentType) ?? Encoding.UTF8;
+        var requestParser = new AsyncFileUploadRequestParser(boundary, requestEncoding);
 
         try
         {
@@ -52,7 +64,7 @@ public class AsyncFileUploadMiddleware
         }
         finally
         {
-            // مهم: بدنه را برای اکشن بعدی به ابتدا برمی‌گردانیم.
+            // برگرداندن موقعیت استریم به ابتدا جهت خواندن توسط فرم‌ریدر یا کنترولر
             context.Request.Body.Position = 0;
         }
 
@@ -89,7 +101,6 @@ public class AsyncFileUploadMiddleware
             return false;
         }
 
-        // نکته: نبود Content-Length یعنی chunked یا نامشخص؛ قبلاً هم رد می‌شد.
         if (request.ContentLength is null or < MinContentLengthForProgress)
         {
             return false;
@@ -103,10 +114,46 @@ public class AsyncFileUploadMiddleware
 
         boundary = "--" + contentType.Substring(boundaryIndex + "boundary=".Length).Trim('"');
 
-        var uploadTracingKey = UploadHelper.GetUploadTracingKey(request.Headers);
+        // ۳. حل خطای IHeaderDictionary به NameValueCollection
+        var headersCollection = ToNameValueCollection(request.Headers);
+        var uploadTracingKey = UploadHelper.GetUploadTracingKey(headersCollection);
         uploadKey = username + uploadTracingKey;
 
         return true;
+    }
+
+    private static NameValueCollection ToNameValueCollection(IHeaderDictionary headers)
+    {
+        var collection = new NameValueCollection(StringComparer.OrdinalIgnoreCase);
+        if (headers == null)
+        {
+            return collection;
+        }
+
+        foreach (var header in headers)
+        {
+            collection.Add(header.Key, header.Value.ToString());
+        }
+
+        return collection;
+    }
+
+    private static Encoding GetRequestEncoding(string contentType)
+    {
+        if (string.IsNullOrEmpty(contentType))
+        {
+            return null;
+        }
+
+        try
+        {
+            var mediaType = Microsoft.Net.Http.Headers.MediaTypeHeaderValue.Parse(contentType);
+            return mediaType.Encoding;
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     private static async Task ReadStreamAsync(
@@ -128,7 +175,6 @@ public class AsyncFileUploadMiddleware
             reportProgress();
         }
 
-        // همان رفتار «خواندن صفر = پایان» نسخه قبلی
         if (progress.TotalBytesRead < progress.ContentLength)
         {
             progress.TotalBytesRead = progress.ContentLength;

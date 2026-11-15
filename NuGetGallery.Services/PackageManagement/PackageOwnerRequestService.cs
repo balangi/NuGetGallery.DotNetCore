@@ -1,165 +1,168 @@
 // Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
+using Microsoft.EntityFrameworkCore;
+using NuGet.Services.Entities;
+using NuGetGallery.Configuration;
+using NuGetGallery.Infrastructure.Authentication;
 using System;
 using System.Collections.Generic;
-using Microsoft.EntityFrameworkCore;
 using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
-using NuGet.Services.Entities;
-using NuGetGallery.Configuration;
 
-namespace NuGetGallery
+namespace NuGetGallery;
+
+public class PackageOwnerRequestService : IPackageOwnerRequestService
 {
-    public class PackageOwnerRequestService : IPackageOwnerRequestService
+    private readonly IEntityRepository<PackageOwnerRequest> _packageOwnerRequestRepository;
+    private readonly IAppConfiguration _appConfiguration;
+
+    public PackageOwnerRequestService(
+        IEntityRepository<PackageOwnerRequest> packageOwnerRequestRepository,
+        IAppConfiguration appConfiguration)
     {
-        private readonly IEntityRepository<PackageOwnerRequest> _packageOwnerRequestRepository;
-        private readonly IAppConfiguration _appConfiguration;
+        _packageOwnerRequestRepository = packageOwnerRequestRepository ?? throw new ArgumentNullException(nameof(packageOwnerRequestRepository));
+        _appConfiguration = appConfiguration ?? throw new ArgumentNullException(nameof(appConfiguration));
+    }
 
-        public PackageOwnerRequestService(
-            IEntityRepository<PackageOwnerRequest> packageOwnerRequestRepository,
-            IAppConfiguration appConfiguration)
+    public PackageOwnerRequest GetPackageOwnershipRequest(PackageRegistration package, User newOwner, string token)
+    {
+        if (package == null)
         {
-            _packageOwnerRequestRepository = packageOwnerRequestRepository ?? throw new ArgumentNullException(nameof(packageOwnerRequestRepository));
-            _appConfiguration = appConfiguration ?? throw new ArgumentNullException(nameof(appConfiguration));
+            throw new ArgumentNullException(nameof(package));
         }
 
-        public PackageOwnerRequest GetPackageOwnershipRequest(PackageRegistration package, User newOwner, string token)
+        if (newOwner == null)
         {
-            if (package == null)
-            {
-                throw new ArgumentNullException(nameof(package));
-            }
-
-            if (newOwner == null)
-            {
-                throw new ArgumentNullException(nameof(newOwner));
-            }
-
-            if (String.IsNullOrEmpty(token))
-            {
-                throw new ArgumentNullException(nameof(token));
-            }
-
-            var request = GetPackageOwnershipRequests(package: package, newOwner: newOwner).FirstOrDefault();
-            if (request == null)
-            {
-                return null;
-            }
-
-            return request.ConfirmationCode == token ? request : null;
+            throw new ArgumentNullException(nameof(newOwner));
         }
 
-        public IEnumerable<PackageOwnerRequest> GetPackageOwnershipRequests(
-            PackageRegistration package = null,
-            User requestingOwner = null,
-            User newOwner = null)
+        if (String.IsNullOrEmpty(token))
         {
-            return GetPackageOwnershipRequests(includeUsers: false, package, requestingOwner, newOwner);
+            throw new ArgumentNullException(nameof(token));
         }
 
-        public IEnumerable<PackageOwnerRequest> GetPackageOwnershipRequestsWithUsers(
-            PackageRegistration package = null,
-            User requestingOwner = null,
-            User newOwner = null)
+        var request = GetPackageOwnershipRequests(package: package, newOwner: newOwner).FirstOrDefault();
+        if (request == null)
         {
-            return GetPackageOwnershipRequests(includeUsers: true, package, requestingOwner, newOwner);
+            return null;
         }
 
-        private IEnumerable<PackageOwnerRequest> GetPackageOwnershipRequests(
-            bool includeUsers,
-            PackageRegistration package,
-            User requestingOwner,
-            User newOwner)
+        return request.ConfirmationCode == token ? request : null;
+    }
+
+    public IEnumerable<PackageOwnerRequest> GetPackageOwnershipRequests(
+        PackageRegistration package = null,
+        User requestingOwner = null,
+        User newOwner = null)
+    {
+        return GetPackageOwnershipRequests(includeUsers: false, package, requestingOwner, newOwner);
+    }
+
+    public IEnumerable<PackageOwnerRequest> GetPackageOwnershipRequestsWithUsers(
+        PackageRegistration package = null,
+        User requestingOwner = null,
+        User newOwner = null)
+    {
+        return GetPackageOwnershipRequests(includeUsers: true, package, requestingOwner, newOwner);
+    }
+
+    private IEnumerable<PackageOwnerRequest> GetPackageOwnershipRequests(
+        bool includeUsers,
+        PackageRegistration package,
+        User requestingOwner,
+        User newOwner)
+    {
+        // اصلاح نوع query به صورت IQueryable عمومی برای جلوگیری از خطای تبدیل IncludableQueryable
+        IQueryable<PackageOwnerRequest> query = _packageOwnerRequestRepository.GetAll()
+            .Include(e => e.PackageRegistration);
+
+        if (includeUsers)
         {
-            var query = _packageOwnerRequestRepository.GetAll().Include(e => e.PackageRegistration);
-
-            if (includeUsers)
-            {
-                query = query
-                    .Include(x => x.RequestingOwner)
-                    .Include(x => x.NewOwner);
-            }
-
-            if (package != null)
-            {
-                query = query.Where(r => r.PackageRegistrationKey == package.Key);
-            }
-
-            if (requestingOwner != null)
-            {
-                query = query.Where(r => r.RequestingOwnerKey == requestingOwner.Key);
-            }
-
-            if (newOwner != null)
-            {
-                query = query.Where(r => r.NewOwnerKey == newOwner.Key);
-            }
-
-            return query.ToArray();
+            query = query
+                .Include(x => x.RequestingOwner)
+                .Include(x => x.NewOwner);
         }
 
-        public async Task<PackageOwnerRequest> AddPackageOwnershipRequest(PackageRegistration package, User requestingOwner, User newOwner)
+        if (package != null)
         {
-            if (package == null)
-            {
-                throw new ArgumentNullException(nameof(package));
-            }
+            query = query.Where(r => r.PackageRegistrationKey == package.Key);
+        }
 
-            if (requestingOwner == null)
-            {
-                throw new ArgumentNullException(nameof(requestingOwner));
-            }
+        if (requestingOwner != null)
+        {
+            query = query.Where(r => r.RequestingOwnerKey == requestingOwner.Key);
+        }
 
-            if (newOwner == null)
-            {
-                throw new ArgumentNullException(nameof(newOwner));
-            }
+        if (newOwner != null)
+        {
+            query = query.Where(r => r.NewOwnerKey == newOwner.Key);
+        }
 
-            var existingRequests = GetPackageOwnershipRequests(package: package).ToList();
-            var duplicate = existingRequests.FirstOrDefault(x => x.NewOwnerKey == newOwner.Key);
-            if (duplicate is not null)
-            {
-                return duplicate;
-            }
+        return query.ToArray();
+    }
 
-            if (existingRequests.Count >= Math.Max(1, _appConfiguration.MaxOwnerRequestsPerPackageRegistration))
-            {
-                throw new UserSafeException(string.Format(
-                    CultureInfo.CurrentCulture,
-                    ServicesStrings.MaximumPackageOwnerRequestsReached,
-                    _appConfiguration.MaxOwnerRequestsPerPackageRegistration));
-            }
+    public async Task<PackageOwnerRequest> AddPackageOwnershipRequest(PackageRegistration package, User requestingOwner, User newOwner)
+    {
+        if (package == null)
+        {
+            throw new ArgumentNullException(nameof(package));
+        }
 
-            var newRequest = new PackageOwnerRequest
-            {
-                PackageRegistrationKey = package.Key,
-                RequestingOwnerKey = requestingOwner.Key,
-                NewOwnerKey = newOwner.Key,
-                ConfirmationCode = CryptographyService.GenerateToken(),
-                RequestDate = DateTime.UtcNow
-            };
+        if (requestingOwner == null)
+        {
+            throw new ArgumentNullException(nameof(requestingOwner));
+        }
 
-            _packageOwnerRequestRepository.InsertOnCommit(newRequest);
+        if (newOwner == null)
+        {
+            throw new ArgumentNullException(nameof(newOwner));
+        }
+
+        var existingRequests = GetPackageOwnershipRequests(package: package).ToList();
+        var duplicate = existingRequests.FirstOrDefault(x => x.NewOwnerKey == newOwner.Key);
+        if (duplicate is not null)
+        {
+            return duplicate;
+        }
+
+        if (existingRequests.Count >= Math.Max(1, _appConfiguration.MaxOwnerRequestsPerPackageRegistration))
+        {
+            throw new UserSafeException(string.Format(
+                CultureInfo.CurrentCulture,
+                ServicesStrings.MaximumPackageOwnerRequestsReached,
+                _appConfiguration.MaxOwnerRequestsPerPackageRegistration));
+        }
+
+        var newRequest = new PackageOwnerRequest
+        {
+            PackageRegistrationKey = package.Key,
+            RequestingOwnerKey = requestingOwner.Key,
+            NewOwnerKey = newOwner.Key,
+            // اصلاح متد تولید توکن (استفاده از Crypto.GenerateToken یا کلاس کمکی استاندارد)
+            ConfirmationCode = Crypto.GenerateToken(),
+            RequestDate = DateTime.UtcNow
+        };
+
+        _packageOwnerRequestRepository.InsertOnCommit(newRequest);
+        await _packageOwnerRequestRepository.CommitChangesAsync();
+
+        return newRequest;
+    }
+
+    public async Task DeletePackageOwnershipRequest(PackageOwnerRequest request, bool commitChanges = true)
+    {
+        if (request == null)
+        {
+            throw new ArgumentNullException(nameof(request));
+        }
+
+        _packageOwnerRequestRepository.DeleteOnCommit(request);
+
+        if (commitChanges)
+        {
             await _packageOwnerRequestRepository.CommitChangesAsync();
-
-            return newRequest;
-        }
-
-        public async Task DeletePackageOwnershipRequest(PackageOwnerRequest request, bool commitChanges = true)
-        {
-            if (request == null)
-            {
-                throw new ArgumentNullException(nameof(request));
-            }
-
-            _packageOwnerRequestRepository.DeleteOnCommit(request);
-
-            if (commitChanges)
-            {
-                await _packageOwnerRequestRepository.CommitChangesAsync();
-            }
         }
     }
 }

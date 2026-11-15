@@ -106,7 +106,7 @@ public class TelemetryService : ITelemetryService, IFeatureFlagTelemetryService
 
     private readonly IDiagnosticsSource _diagnosticsSource;
     private readonly ITelemetryClient _telemetryClient;
-
+    private readonly IHttpContextAccessor _httpContextAccessor; // افزودن برای تزریق
     private readonly JsonSerializerSettings _defaultJsonSerializerSettings = new JsonSerializerSettings
     {
         ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
@@ -262,10 +262,12 @@ public class TelemetryService : ITelemetryService, IFeatureFlagTelemetryService
     public const string Sync = "Sync";
     public const string Async = "Async";
 
-    public TelemetryService(IDiagnosticsSource diagnosticsSource, ITelemetryClient telemetryClient)
+    public TelemetryService(IDiagnosticsSource diagnosticsSource, ITelemetryClient telemetryClient,
+        IHttpContextAccessor httpContextAccessor) // به‌روزرسانی سازنده
     {
         _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
         _diagnosticsSource = diagnosticsSource ?? throw new ArgumentNullException(nameof(diagnosticsSource));
+        _httpContextAccessor = httpContextAccessor ?? throw new ArgumentNullException(nameof(httpContextAccessor));
     }
 
     public void TraceException(Exception exception)
@@ -749,25 +751,20 @@ public class TelemetryService : ITelemetryService, IFeatureFlagTelemetryService
             properties.Add(AccountKey, account.Key.ToString());
         });
     }
-    private static string GetClientVersion()
+    private string GetClientVersion()
     {
-        return HttpContext.Current?.Request?.Headers[ServicesConstants.ClientVersionHeaderName];
+        return _httpContextAccessor.HttpContext?.Request?.Headers[ServicesConstants.ClientVersionHeaderName];
     }
 
-    private static string GetProtocolVersion()
+    private string GetProtocolVersion()
     {
-        return HttpContext.Current?.Request?.Headers[ServicesConstants.NuGetProtocolHeaderName];
+        return _httpContextAccessor.HttpContext?.Request?.Headers[ServicesConstants.NuGetProtocolHeaderName];
     }
 
-    private static string GetClientInformation()
+    private string GetClientInformation()
     {
-        if (HttpContext.Current != null)
-        {
-            HttpContextBase contextBase = new HttpContextWrapper(HttpContext.Current);
-            return contextBase.GetClientInformation();
-        }
-
-        return null;
+        // در ASP.NET Core، متد GetClientInformation به عنوان یک Extension روی HttpContext در دسترس است
+        return _httpContextAccessor.HttpContext?.GetClientInformation();
     }
 
     private static string GetAccountCreationDate(User user)
