@@ -1,100 +1,119 @@
-// Copyright (c) .NET Foundation. All rights reserved.
-// Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
-
 using System;
 using System.Collections.Generic;
-using System.Web;
-using System.Web.Routing;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Extensions;
+using Microsoft.AspNetCore.Routing;
 
-namespace NuGetGallery
+namespace NuGetGallery;
+
+public static class QuietLog
 {
-    public static class QuietLog
+    private static ITelemetryClient Telemetry;
+
+    public static void UseTelemetryClient(ITelemetryClient telemetryClient)
     {
-        private static ITelemetryClient Telemetry;
+        Telemetry = telemetryClient
+            ?? throw new ArgumentNullException(nameof(telemetryClient));
+    }
 
-        public static void UseTelemetryClient(ITelemetryClient telemetryClient)
+    public static void LogHandledException(Exception e)
+    {
+        var aggregateExceptionId = Guid.NewGuid().ToString();
+
+        if (e is AggregateException aggregateException)
         {
-            Telemetry = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
-        }
+            LogHandledExceptionCore(aggregateException, aggregateExceptionId);
 
-        public static void LogHandledException(Exception e)
-        {
-            var aggregateExceptionId = Guid.NewGuid().ToString();
-
-            var aggregateException = e as AggregateException;
-            if (aggregateException != null)
+            foreach (var innerException in aggregateException.InnerExceptions)
             {
-                LogHandledExceptionCore(aggregateException, aggregateExceptionId);
-
-                foreach (var innerException in aggregateException.InnerExceptions)
-                {
-                    LogHandledExceptionCore(innerException, aggregateExceptionId);
-                }
-            }
-            else
-            {
-                LogHandledExceptionCore(e, aggregateExceptionId);
-
-                if (e.InnerException != null)
-                {
-                    LogHandledExceptionCore(e.InnerException, aggregateExceptionId);
-                }
+                LogHandledExceptionCore(innerException, aggregateExceptionId);
             }
         }
-
-        private static void LogHandledExceptionCore(Exception e, string aggregateExceptionId)
+        else
         {
-            try
+            LogHandledExceptionCore(e, aggregateExceptionId);
+
+            if (e.InnerException != null)
             {
-                // send exception to AppInsights
-                Telemetry?.TrackException(e, new Dictionary<string, string>
+                LogHandledExceptionCore(e.InnerException, aggregateExceptionId);
+            }
+        }
+    }
+
+    private static void LogHandledExceptionCore(
+        Exception e,
+        string aggregateExceptionId)
+    {
+        try
+        {
+            Telemetry?.TrackException(
+                e,
+                new Dictionary<string, string>
                 {
                     { "aggregateExceptionId", aggregateExceptionId }
                 });
-            }
-            catch
-            {
-                // logging failed, don't allow exception to escape
-            }
         }
-
-        internal static bool IsPIIRoute(RouteData route, out string operation)
+        catch
         {
-            if(route == null)
-            {
-                operation = string.Empty;
-                return false;
-            }
-            operation = $"{route.Values["controller"]}/{route.Values["action"]}";
-            return Obfuscator.ObfuscatedActions.Contains(operation);
+            // Logging must not cause another exception.
         }
+    }
 
-        /// <summary>
-        /// These values will be used to overwrite the serverVariables in the error before the exception is logged.
-        /// These are the serverVariables that Gallery decides that will be obfuscated and the values to be used for obfuscation.
-        /// </summary>
-        /// <param name="currentContext">The current HttpContext.</param>
-        /// <returns>A dictionary with the server variables that will be obfuscated.</returns>
-        internal static Dictionary<string, string> GetObfuscatedServerVariables(HttpContextBase currentContext)
+    internal static bool IsPIIRoute(
+        RouteData route,
+        out string operation)
+    {
+        if (route == null)
         {
-            string operation = string.Empty;
-            if(currentContext == null ||
-               currentContext.Request == null ||
-               currentContext.Request.RequestContext == null ||
-               !IsPIIRoute(currentContext.Request.RequestContext.RouteData, out operation))
-            {
-                return null;
-            }
-            
-            var obfuscatedServerVariables = new Dictionary<string, string>();
-            var obfuscatedURL = Obfuscator.DefaultObfuscatedUrl(currentContext.Request.Url);
-            obfuscatedServerVariables.Add("HTTP_REFERER", obfuscatedURL);
-            obfuscatedServerVariables.Add("PATH_INFO", operation);
-            obfuscatedServerVariables.Add("PATH_TRANSLATED", operation);
-            obfuscatedServerVariables.Add("SCRIPT_NAME", operation);
-            obfuscatedServerVariables.Add("URL", obfuscatedURL);
-
-            return obfuscatedServerVariables;
+            operation = string.Empty;
+            return false;
         }
+
+        var controller = route.Values["controller"]?.ToString();
+        var action = route.Values["action"]?.ToString();
+
+        operation = $"{controller}/{action}";
+
+        return Obfuscator.ObfuscatedActions.Contains(operation);
+    }
+
+    /// <summary>
+    /// Gets obfuscated server variables for PII routes.
+    /// </summary>
+    internal static Dictionary<string, string> GetObfuscatedServerVariables(
+        HttpContext currentContext)
+    {
+        if (currentContext == null)
+        {
+            return null;
+        }
+
+        var routeData = currentContext.GetRouteData();
+
+        if (!IsPIIRoute(routeData, out var operation))
+        {
+            return null;
+        }
+
+        var requestUrl = currentContext.Request.GetDisplayUrl();
+
+        if (!Uri.TryCreate(
+                requestUrl,
+                UriKind.Absolute,
+                out var requestUri))
+        {
+            return null;
+        }
+
+        var obfuscatedUrl = Obfuscator.DefaultObfuscatedUrl(requestUri);
+
+        return new Dictionary<string, string>
+        {
+            { "HTTP_REFERER", obfuscatedUrl },
+            { "PATH_INFO", operation },
+            { "PATH_TRANSLATED", operation },
+            { "SCRIPT_NAME", operation },
+            { "URL", obfuscatedUrl }
+        };
     }
 }

@@ -3,18 +3,17 @@
 
 using NuGet.Services.KeyVault;
 
-namespace NuGetGallery.Configuration.SecretReader
-{
-    public class EmptySecretReaderFactory : ISecretReaderFactory
-    {
-        public ISecretInjector CreateSecretInjector(ISecretReader secretReader)
-        {
-            return new SecretInjector(secretReader);
-        }
+namespace NuGetGallery.Configuration.SecretReader;
 
-        public ISecretReader CreateSecretReader()
-        {
-            return new EmptySecretReader();
-        }
+public class EmptySecretReaderFactory : ISecretReaderFactory
+{
+    public ISecretInjector CreateSecretInjector(ISecretReader secretReader)
+    {
+        return new SecretInjector(secretReader);
+    }
+
+    public ISecretReader CreateSecretReader()
+    {
+        return new EmptySecretReader();
     }
 }

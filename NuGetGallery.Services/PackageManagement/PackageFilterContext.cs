@@ -1,20 +1,17 @@
-// Copyright (c) .NET Foundation. All rights reserved.
-// Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
+using Microsoft.AspNetCore.Http;
 
-using System.Web.Routing;
+namespace NuGetGallery.Services;
 
-namespace NuGetGallery.Services
+public class PackageFilterContext
 {
-    public class PackageFilterContext
-    {
-        public RouteBase RouteBase { get; }
-            
-        public string Version { get; }
+    // استفاده از Endpoint به عنوان جایگزین عمومی برای شناسایی روت
+    public Endpoint Endpoint { get; }
 
-        public PackageFilterContext(RouteBase routeBase, string version)
-        {
-            RouteBase = routeBase;
-            Version = version;
-        }
+    public string Version { get; }
+
+    public PackageFilterContext(Endpoint endpoint, string version)
+    {
+        Endpoint = endpoint;
+        Version = version;
     }
 }

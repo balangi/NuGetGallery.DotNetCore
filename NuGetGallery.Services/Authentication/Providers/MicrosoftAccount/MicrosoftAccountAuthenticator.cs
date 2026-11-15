@@ -2,46 +2,50 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System.Security.Claims;
-using System.Web.Mvc;
-using Microsoft.Owin.Security.MicrosoftAccount;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
 using NuGetGallery.Configuration;
-using Owin;
 
-namespace NuGetGallery.Authentication.Providers.MicrosoftAccount
+namespace NuGetGallery.Authentication.Providers.MicrosoftAccount;
+
+public class MicrosoftAccountAuthenticator : Authenticator<MicrosoftAccountAuthenticatorConfiguration>
 {
-    public class MicrosoftAccountAuthenticator : Authenticator<MicrosoftAccountAuthenticatorConfiguration>
+    public static readonly string DefaultAuthenticationType = "MicrosoftAccount";
+
+    protected override void AttachToApp(IGalleryConfigurationService config, AuthenticationBuilder authBuilder)
     {
-        public static readonly string DefaultAuthenticationType = "MicrosoftAccount";
-
-        protected override void AttachToOwinApp(IGalleryConfigurationService config, IAppBuilder app)
+        authBuilder.AddMicrosoftAccount(BaseConfig.AuthenticationType, options =>
         {
-            var options = new MicrosoftAccountAuthenticationOptions();
-            options.Scope.Add("wl.emails");
-            options.Scope.Add("wl.signin");
-            Config.ApplyToOwinSecurityOptions(options);
-            app.UseMicrosoftAccountAuthentication(options);
-        }
+            // اسکوپ‌های معادل در ASP.NET Core
+            options.Scope.Add("https://graph.microsoft.com/user.read");
 
-        public override AuthenticatorUI GetUI()
-        {
-            return new AuthenticatorUI(
-                ServicesStrings.MicrosoftAccount_SignInMessage,
-                ServicesStrings.MicrosoftAccount_SignInMessage,
-                ServicesStrings.MicrosoftAccount_AccountNoun)
-            {
-                IconImagePath = "~/Content/gallery/img/microsoft-account.svg",
-                IconImageFallbackPath = "~/Content/gallery/img/microsoft-account-24x24.png",
-            };
-        }
+            // اعمال تنظیمات ClientId و ClientSecret از طریق کلاس Config
+            Config.ApplyToAuthSecurityOptions(options);
+        });
+    }
 
-        public override ActionResult Challenge(string redirectUrl, AuthenticationPolicy policy = null)
+    public override AuthenticatorUI GetUI()
+    {
+        return new AuthenticatorUI(
+            ServicesStrings.MicrosoftAccount_SignInMessage,
+            ServicesStrings.MicrosoftAccount_SignInMessage,
+            ServicesStrings.MicrosoftAccount_AccountNoun)
         {
-            return new ChallengeResult(BaseConfig.AuthenticationType, redirectUrl, policy?.GetProperties());
-        }
+            // مسیرهای ثابت در ASP.NET Core معمولاً بدون ~ هستند (بسته به تنظیمات Static Files)
+            IconImagePath = "/Content/gallery/img/microsoft-account.svg",
+            IconImageFallbackPath = "/Content/gallery/img/microsoft-account-24x24.png",
+        };
+    }
 
-        public override IdentityInformation GetIdentityInformation(ClaimsIdentity claimsIdentity)
-        {
-            return ClaimsExtensions.GetIdentityInformation(claimsIdentity, DefaultAuthenticationType);
-        }
+    public override ActionResult Challenge(string redirectUrl, AuthenticationPolicy policy = null)
+    {
+        // استفاده از کلاس ChallengeResult سفارشی که قبلاً برای Core نوشتیم
+        return new ChallengeResult(BaseConfig.AuthenticationType, redirectUrl, policy?.GetProperties());
+    }
+
+    public override IdentityInformation GetIdentityInformation(ClaimsIdentity claimsIdentity)
+    {
+        return ClaimsExtensions.GetIdentityInformation(claimsIdentity, DefaultAuthenticationType);
     }
 }

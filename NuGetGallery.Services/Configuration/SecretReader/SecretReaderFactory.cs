@@ -6,99 +6,98 @@ using System.Globalization;
 using System.Security.Cryptography.X509Certificates;
 using NuGet.Services.KeyVault;
 
-namespace NuGetGallery.Configuration.SecretReader
+namespace NuGetGallery.Configuration.SecretReader;
+
+public class SecretReaderFactory : ISecretReaderFactory
 {
-    public class SecretReaderFactory : ISecretReaderFactory
+    internal const string KeyVaultConfigurationPrefix = "KeyVault.";
+    internal const string UseManagedIdentityConfigurationKey = "UseManagedIdentity";
+    internal const string VaultNameConfigurationKey = "VaultName";
+    internal const string TenantIdConfigurationKey = "TenantId";
+    internal const string ClientIdConfigurationKey = "ClientId";
+    internal const string CertificateThumbprintConfigurationKey = "CertificateThumbprint";
+    internal const string CertificateStoreLocation = "StoreLocation";
+    internal const string CertificateStoreName = "StoreName";
+
+    private const int SecretCachingRefreshInterval = 60 * 60 * 6;
+    private IGalleryConfigurationService _configurationService;
+
+    public SecretReaderFactory(IGalleryConfigurationService configurationService)
     {
-        internal const string KeyVaultConfigurationPrefix = "KeyVault.";
-        internal const string UseManagedIdentityConfigurationKey = "UseManagedIdentity";
-        internal const string VaultNameConfigurationKey = "VaultName";
-        internal const string TenantIdConfigurationKey = "TenantId";
-        internal const string ClientIdConfigurationKey = "ClientId";
-        internal const string CertificateThumbprintConfigurationKey = "CertificateThumbprint";
-        internal const string CertificateStoreLocation = "StoreLocation";
-        internal const string CertificateStoreName = "StoreName";
+        _configurationService = configurationService ?? throw new ArgumentNullException(nameof(configurationService));
+    }
 
-        private const int SecretCachingRefreshInterval = 60 * 60 * 6;
-        private IGalleryConfigurationService _configurationService;
-
-        public SecretReaderFactory(IGalleryConfigurationService configurationService)
+    public ISecretInjector CreateSecretInjector(ISecretReader secretReader)
+    {
+        if (secretReader == null)
         {
-            _configurationService = configurationService ?? throw new ArgumentNullException(nameof(configurationService));
+            throw new ArgumentNullException(nameof(secretReader));
         }
 
-        public ISecretInjector CreateSecretInjector(ISecretReader secretReader)
+        return new SecretInjector(secretReader);
+    }
+
+    private string ResolveKeyVaultSettingName(string settingName)
+    {
+        return string.Format(CultureInfo.InvariantCulture, "{0}{1}", KeyVaultConfigurationPrefix, settingName);
+    }
+
+    public ISecretReader CreateSecretReader()
+    {
+        ISecretReader secretReader;
+
+        var vaultName = _configurationService.ReadRawSetting(ResolveKeyVaultSettingName(VaultNameConfigurationKey));
+
+        if (!string.IsNullOrEmpty(vaultName))
         {
-            if (secretReader == null)
+            var useManagedIdentity = GetOptionalKeyVaultBoolSettingValue(UseManagedIdentityConfigurationKey, defaultValue: false);
+            var clientId = _configurationService.ReadRawSetting(ResolveKeyVaultSettingName(ClientIdConfigurationKey));
+
+            KeyVaultConfiguration keyVaultConfiguration;
+            if (useManagedIdentity)
             {
-                throw new ArgumentNullException(nameof(secretReader));
-            }
-
-            return new SecretInjector(secretReader);
-        }
-
-        private string ResolveKeyVaultSettingName(string settingName)
-        {
-            return string.Format(CultureInfo.InvariantCulture, "{0}{1}", KeyVaultConfigurationPrefix, settingName);
-        }
-
-        public ISecretReader CreateSecretReader()
-        {
-            ISecretReader secretReader;
-
-            var vaultName = _configurationService.ReadRawSetting(ResolveKeyVaultSettingName(VaultNameConfigurationKey));
-
-            if (!string.IsNullOrEmpty(vaultName))
-            {
-                var useManagedIdentity = GetOptionalKeyVaultBoolSettingValue(UseManagedIdentityConfigurationKey, defaultValue: false);
-                var clientId = _configurationService.ReadRawSetting(ResolveKeyVaultSettingName(ClientIdConfigurationKey));
-
-                KeyVaultConfiguration keyVaultConfiguration;
-                if (useManagedIdentity)
-                {
-                    keyVaultConfiguration = new KeyVaultConfiguration(vaultName, clientId);
-                }
-                else
-                {
-                    var tenantId = _configurationService.ReadRawSetting(ResolveKeyVaultSettingName(TenantIdConfigurationKey));
-                    var certificateThumbprint = _configurationService.ReadRawSetting(ResolveKeyVaultSettingName(CertificateThumbprintConfigurationKey));
-                    var storeName = GetOptionalKeyVaultEnumSettingValue(CertificateStoreName, StoreName.My);
-                    var storeLocation = GetOptionalKeyVaultEnumSettingValue(CertificateStoreLocation, StoreLocation.LocalMachine);
-                    var certificate = CertificateUtility.FindCertificateByThumbprint(storeName, storeLocation, certificateThumbprint, validationRequired: true);
-                    keyVaultConfiguration = new KeyVaultConfiguration(vaultName, tenantId, clientId, certificate);
-                }
-
-                secretReader = new KeyVaultReader(keyVaultConfiguration);
+                keyVaultConfiguration = new KeyVaultConfiguration(vaultName, clientId);
             }
             else
             {
-                secretReader = new EmptySecretReader();
+                var tenantId = _configurationService.ReadRawSetting(ResolveKeyVaultSettingName(TenantIdConfigurationKey));
+                var certificateThumbprint = _configurationService.ReadRawSetting(ResolveKeyVaultSettingName(CertificateThumbprintConfigurationKey));
+                var storeName = GetOptionalKeyVaultEnumSettingValue(CertificateStoreName, StoreName.My);
+                var storeLocation = GetOptionalKeyVaultEnumSettingValue(CertificateStoreLocation, StoreLocation.LocalMachine);
+                var certificate = CertificateUtility.FindCertificateByThumbprint(storeName, storeLocation, certificateThumbprint, validationRequired: true);
+                keyVaultConfiguration = new KeyVaultConfiguration(vaultName, tenantId, clientId, certificate);
             }
 
-            return new CachingSecretReader(secretReader, refreshIntervalSec: SecretCachingRefreshInterval);
+            secretReader = new KeyVaultReader(keyVaultConfiguration);
         }
-
-        private bool GetOptionalKeyVaultBoolSettingValue(string settingName, bool defaultValue)
+        else
         {
-            var settingValueStr = _configurationService.ReadRawSetting(ResolveKeyVaultSettingName(settingName));
-            if (!bool.TryParse(settingValueStr, out var settingValue))
-            {
-                return defaultValue;
-            }
-
-            return settingValue;
+            secretReader = new EmptySecretReader();
         }
 
-        private TEnum GetOptionalKeyVaultEnumSettingValue<TEnum>(string settingName, TEnum defaultValue)
-            where TEnum: struct
+        return new CachingSecretReader(secretReader, refreshIntervalSec: SecretCachingRefreshInterval);
+    }
+
+    private bool GetOptionalKeyVaultBoolSettingValue(string settingName, bool defaultValue)
+    {
+        var settingValueStr = _configurationService.ReadRawSetting(ResolveKeyVaultSettingName(settingName));
+        if (!bool.TryParse(settingValueStr, out var settingValue))
         {
-            var settingValueStr = _configurationService.ReadRawSetting(ResolveKeyVaultSettingName(settingName));
-            if (!Enum.TryParse<TEnum>(settingValueStr, out var settingValue))
-            {
-                return defaultValue;
-            }
-
-            return settingValue;
+            return defaultValue;
         }
+
+        return settingValue;
+    }
+
+    private TEnum GetOptionalKeyVaultEnumSettingValue<TEnum>(string settingName, TEnum defaultValue)
+        where TEnum: struct
+    {
+        var settingValueStr = _configurationService.ReadRawSetting(ResolveKeyVaultSettingName(settingName));
+        if (!Enum.TryParse<TEnum>(settingValueStr, out var settingValue))
+        {
+            return defaultValue;
+        }
+
+        return settingValue;
     }
 }

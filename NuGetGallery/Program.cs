@@ -63,6 +63,39 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.SlidingExpiration = true;
     });
 
+
+builder.Services
+    .AddAuthentication(options =>
+    {
+        options.DefaultAuthenticateScheme = AuthenticationTypes.LocalUser;
+        options.DefaultSignInScheme = AuthenticationTypes.LocalUser;
+        options.DefaultChallengeScheme = AuthenticationTypes.LocalUser;
+    });
+
+builder.Services.AddAuthentication()
+    .AddScheme<ApiKeyAuthenticationOptions, ApiKeyAuthenticationHandler>(
+        ApiKeyAuthenticationOptions.DefaultScheme,
+        options =>
+        {
+            var apiKeyConfig = builder.Configuration
+                .GetSection("ApiKey")
+                .Get<ApiKeyAuthenticatorConfiguration>();
+
+            if (apiKeyConfig is not null)
+            {
+                options.ApiKeyHeaderName = apiKeyConfig.HeaderName;
+                options.ApiKeyClaim = apiKeyConfig.Claim;
+            }
+        });
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("ApiKeyOnly", policy =>
+        policy.AddAuthenticationSchemes(ApiKeyAuthenticationOptions.DefaultScheme)
+              .RequireAuthenticatedUser());
+});
+
+
 // ۶. سرویس‌های پس‌زمینه و تله‌متری (جایگزین WebBackgrounder در AppActivator)
 builder.Services.AddHostedService<CloudDownloadCountServiceRefreshHostedService>();
 builder.Services.AddHostedService<PackageVulnerabilitiesCacheRefreshHostedService>();

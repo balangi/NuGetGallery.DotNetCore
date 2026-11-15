@@ -1,84 +1,79 @@
 // Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Web.Helpers;
 using NuGet.Services.Entities;
 using NuGetGallery.Services.Authentication;
 
-namespace NuGetGallery.Infrastructure.Authentication
+namespace NuGetGallery.Infrastructure.Authentication;
+
+public class CredentialValidator : ICredentialValidator
 {
-    public class CredentialValidator : ICredentialValidator
+    public static readonly Dictionary<string, Func<string, Credential, bool>> Validators = new Dictionary<string, Func<string, Credential, bool>>(StringComparer.OrdinalIgnoreCase) {
+        { CredentialTypes.Password.V3, (password, cred) => V3Hasher.VerifyHash(hashedData: cred.Value, providedInput: password) },
+        { CredentialTypes.Password.Pbkdf2, (password, cred) => Crypto.VerifyHashedPassword(hashedPassword: cred.Value, password: password) },
+        { CredentialTypes.Password.Sha1, (password, cred) => LegacyHasher.VerifyHash(cred.Value, password, ServicesConstants.Sha1HashAlgorithmId) }
+    };
+
+    public bool ValidatePasswordCredential(Credential credential, string providedPassword)
     {
-        public static readonly Dictionary<string, Func<string, Credential, bool>> Validators = new Dictionary<string, Func<string, Credential, bool>>(StringComparer.OrdinalIgnoreCase) {
-            { CredentialTypes.Password.V3, (password, cred) => V3Hasher.VerifyHash(hashedData: cred.Value, providedInput: password) },
-            { CredentialTypes.Password.Pbkdf2, (password, cred) => Crypto.VerifyHashedPassword(hashedPassword: cred.Value, password: password) },
-            { CredentialTypes.Password.Sha1, (password, cred) => LegacyHasher.VerifyHash(cred.Value, password, ServicesConstants.Sha1HashAlgorithmId) }
-        };
+        Func<string, Credential, bool> validator;
 
-        public bool ValidatePasswordCredential(Credential credential, string providedPassword)
+        if (!Validators.TryGetValue(credential.Type, out validator))
         {
-            Func<string, Credential, bool> validator;
-
-            if (!Validators.TryGetValue(credential.Type, out validator))
-            {
-                return false;
-            }
-
-            return validator(providedPassword, credential);
+            return false;
         }
 
-        public IList<Credential> GetValidCredentialsForApiKey(IQueryable<Credential> allCredentials, string providedApiKey, string galleryEnvironment)
+        return validator(providedPassword, credential);
+    }
+
+    public IList<Credential> GetValidCredentialsForApiKey(IQueryable<Credential> allCredentials, string providedApiKey, string galleryEnvironment)
+    {
+        var results = new List<Credential>();
+
+        if (ApiKeyV4.TryParse(providedApiKey, out ApiKeyV4 apiKeyV4))
         {
-            var results = new List<Credential>();
+            var foundApiKeys = allCredentials.Where(c => c.Type == CredentialTypes.ApiKey.V4 &&
+                                                         c.Value.StartsWith(apiKeyV4.IdPart)).ToList();
 
-            if (ApiKeyV4.TryParse(providedApiKey, out ApiKeyV4 apiKeyV4))
+            // There shouldn't be duplications in the id part because it's long enough, but we shouldn't assume that.
+            results = foundApiKeys.Where(c => apiKeyV4.Verify(c.Value)).ToList();
+        }
+        else if (ApiKeyV5.TryParseAndValidate(providedApiKey, ApiKeyV5.GetEnvironment(galleryEnvironment), out ApiKeyV5 apiKeyV5))
+        {
+            results = allCredentials.Where(c => c.Type == CredentialTypes.ApiKey.V5 && c.Value == apiKeyV5.HashedApiKey).ToList();
+        }
+        else
+        {
+            // Try to authenticate as APIKey V1/V2/V3/Verify
+            if (ApiKeyV3.TryParse(providedApiKey, out var v3ApiKey))
             {
-                var foundApiKeys = allCredentials.Where(c => c.Type == CredentialTypes.ApiKey.V4 &&
-                                                             c.Value.StartsWith(apiKeyV4.IdPart)).ToList();
+                results = allCredentials.Where(c => c.Type.StartsWith(CredentialTypes.ApiKey.Prefix) &&
+                                                    (c.Value == providedApiKey || c.Value.StartsWith(v3ApiKey.IdPart))).ToList();
 
-                // There shouldn't be duplications in the id part because it's long enough, but we shouldn't assume that.
-                results = foundApiKeys.Where(c => apiKeyV4.Verify(c.Value)).ToList();
-            }
-            else if (ApiKeyV5.TryParseAndValidate(providedApiKey, ApiKeyV5.GetEnvironment(galleryEnvironment), out ApiKeyV5 apiKeyV5))
-            {
-                results = allCredentials.Where(c => c.Type == CredentialTypes.ApiKey.V5 && c.Value == apiKeyV5.HashedApiKey).ToList();
-            }
-            else
-            {
-                // Try to authenticate as APIKey V1/V2/V3/Verify
-                if (ApiKeyV3.TryParse(providedApiKey, out var v3ApiKey))
+                results = results.Where(credential =>
                 {
-                    results = allCredentials.Where(c => c.Type.StartsWith(CredentialTypes.ApiKey.Prefix) &&
-                                                        (c.Value == providedApiKey || c.Value.StartsWith(v3ApiKey.IdPart))).ToList();
-
-                    results = results.Where(credential =>
+                    switch (credential.Type)
                     {
-                        switch (credential.Type)
-                        {
-                            case CredentialTypes.ApiKey.V1:
-                            case CredentialTypes.ApiKey.V2:
-                            case CredentialTypes.ApiKey.VerifyV1:
-                                {
-                                    return credential.Value == providedApiKey;
-                                }
-                            case CredentialTypes.ApiKey.V3:
-                                {
-                                    return v3ApiKey.Verify(credential.Value);
-                                }
+                        case CredentialTypes.ApiKey.V1:
+                        case CredentialTypes.ApiKey.V2:
+                        case CredentialTypes.ApiKey.VerifyV1:
+                            {
+                                return credential.Value == providedApiKey;
+                            }
+                        case CredentialTypes.ApiKey.V3:
+                            {
+                                return v3ApiKey.Verify(credential.Value);
+                            }
 
-                            default:
-                                {
-                                    return false;
-                                }
-                        }
-                    }).ToList();
-                }
+                        default:
+                            {
+                                return false;
+                            }
+                    }
+                }).ToList();
             }
-
-            return results;
         }
+
+        return results;
     }
 }

@@ -1,46 +1,42 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
-using System;
-using Microsoft.Owin;
-using Microsoft.Owin.Security;
-using Microsoft.Owin.Security.Cookies;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 using NuGetGallery.Configuration;
-using Owin;
 
-namespace NuGetGallery.Authentication.Providers.Cookie
+namespace NuGetGallery.Authentication.Providers.Cookie;
+
+public class LocalUserAuthenticator : Authenticator
 {
-    public class LocalUserAuthenticator : Authenticator
+    protected override void AttachToApp(
+        IGalleryConfigurationService config,
+        AuthenticationBuilder authBuilder)
     {
-        protected override void AttachToOwinApp(IGalleryConfigurationService config, IAppBuilder app)
+        var cookieSecurePolicy = config.Current.RequireSSL
+            ? CookieSecurePolicy.Always
+            : CookieSecurePolicy.None;
+
+        authBuilder.AddCookie(AuthenticationTypes.LocalUser, options =>
         {
-            var cookieSecurity = config.Current.RequireSSL ?
-                CookieSecureOption.Always :
-                CookieSecureOption.Never;
+            options.Cookie.HttpOnly = true;
+            options.Cookie.SecurePolicy = cookieSecurePolicy;
 
-            var options = new CookieAuthenticationOptions
-            {
-                AuthenticationType = AuthenticationTypes.LocalUser,
-                AuthenticationMode = AuthenticationMode.Active,
-                CookieHttpOnly = true,
-                CookieSecure = cookieSecurity,
-                LoginPath = new PathString("/users/account/LogOn"),
-                ExpireTimeSpan = TimeSpan.FromHours(6),
-                SlidingExpiration = true
-            };
+            options.LoginPath = "/users/account/LogOn";
+            options.ExpireTimeSpan = TimeSpan.FromHours(6);
+            options.SlidingExpiration = true;
 
-            BaseConfig.ApplyToOwinSecurityOptions(options);
-            app.UseCookieAuthentication(options);
-            app.SetDefaultSignInAsAuthenticationType(AuthenticationTypes.LocalUser);
-        }
+            BaseConfig.ApplyToAuthSecurityOptions(options);
+        });
+    }
 
-        protected internal override AuthenticatorConfiguration CreateConfigObject()
+    protected internal override AuthenticatorConfiguration CreateConfigObject()
+    {
+        return new AuthenticatorConfiguration
         {
-            return new AuthenticatorConfiguration
-            {
-                AuthenticationType = AuthenticationTypes.LocalUser,
-                Enabled = false
-            };
-        }
+            AuthenticationType = AuthenticationTypes.LocalUser,
+            Enabled = false
+        };
     }
 }

@@ -3,10 +3,9 @@
 
 #nullable enable
 
-using System;
-using System.ComponentModel;
 using NuGet.Services.Configuration;
 using NuGet.Services.Entities;
+using System.ComponentModel;
 
 namespace NuGetGallery.Services.Authentication;
 

@@ -1,31 +1,42 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
-using System.Collections.Generic;
-using System.Web;
-using System.Web.Mvc;
-using Microsoft.Owin.Security;
+using Microsoft.AspNetCore.Authentication;
 
-namespace NuGetGallery
+namespace NuGetGallery;
+
+/// <summary>
+/// نگاشت سازگار با نسخه قدیمی جهت ارجاع به ChallengeResult بومی ASP.NET Core
+/// </summary>
+public class ChallengeResult : Microsoft.AspNetCore.Mvc.ChallengeResult
 {
-    // Borrowed from ASP.Net template in VS 2013 :)
-    public class ChallengeResult : HttpUnauthorizedResult
+    public ChallengeResult(string provider, string redirectUri, IDictionary<string, string> properties = null)
+        : base(provider, CreateProperties(redirectUri, properties))
     {
-        public ChallengeResult(string provider, string redirectUri, IDictionary<string, string> properties)
+        LoginProvider = provider;
+        RedirectUri = redirectUri;
+        Properties = properties ?? new Dictionary<string, string>();
+    }
+
+    public string LoginProvider { get; set; }
+    public string RedirectUri { get; set; }
+    public IDictionary<string, string> Properties { get; set; }
+
+    private static AuthenticationProperties CreateProperties(string redirectUri, IDictionary<string, string> properties)
+    {
+        var authProperties = new AuthenticationProperties
         {
-            LoginProvider = provider;
-            RedirectUri = redirectUri;
-            Properties = properties ?? new Dictionary<string, string>();
+            RedirectUri = redirectUri
+        };
+
+        if (properties != null)
+        {
+            foreach (var pair in properties)
+            {
+                authProperties.Items[pair.Key] = pair.Value;
+            }
         }
 
-        public string LoginProvider { get; set; }
-        public string RedirectUri { get; set; }
-        public IDictionary<string, string> Properties { get; set; }
-
-        public override void ExecuteResult(ControllerContext context)
-        {
-            var properties = new AuthenticationProperties(Properties) { RedirectUri = RedirectUri };
-            context.HttpContext.GetOwinContext().Authentication.Challenge(properties, LoginProvider);
-        }
+        return authProperties;
     }
 }

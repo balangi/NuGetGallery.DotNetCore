@@ -1,50 +1,49 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
-using System;
-using System.Configuration;
+
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.MicrosoftAccount;
 using System.Globalization;
-using Microsoft.Owin.Security;
-using Microsoft.Owin.Security.MicrosoftAccount;
 
-namespace NuGetGallery.Authentication.Providers.MicrosoftAccount
+namespace NuGetGallery.Authentication.Providers.MicrosoftAccount;
+
+public class MicrosoftAccountAuthenticatorConfiguration : AuthenticatorConfiguration
 {
-    public class MicrosoftAccountAuthenticatorConfiguration : AuthenticatorConfiguration
+    public string ClientId { get; set; }
+
+    public string ClientSecret { get; set; }
+
+    public MicrosoftAccountAuthenticatorConfiguration()
     {
-        public string ClientId { get; set; }
-        public string ClientSecret { get; set; }
+        AuthenticationType = MicrosoftAccountAuthenticator.DefaultAuthenticationType;
+    }
 
-        public MicrosoftAccountAuthenticatorConfiguration()
+    public override void ApplyToAuthSecurityOptions(AuthenticationSchemeOptions options)
+    {
+        base.ApplyToAuthSecurityOptions(options);
+
+        if (options is not MicrosoftAccountOptions microsoftAccountOptions)
         {
-            AuthenticationType = MicrosoftAccountAuthenticator.DefaultAuthenticationType;
+            return;
         }
 
-        public override void ApplyToOwinSecurityOptions(AuthenticationOptions options)
+        if (string.IsNullOrWhiteSpace(ClientId))
         {
-            base.ApplyToOwinSecurityOptions(options);
-
-            var opts = options as MicrosoftAccountAuthenticationOptions;
-            if (opts != null)
-            {
-                if (String.IsNullOrEmpty(ClientId))
-                {
-                    throw new ConfigurationErrorsException(String.Format(
-                        CultureInfo.CurrentCulture,
-                        ServicesStrings.MissingRequiredConfigurationValue,
-                        "Auth.MicrosoftAccount.ClientId"));
-                }
-
-                opts.ClientId = ClientId;
-
-                if (String.IsNullOrEmpty(ClientSecret))
-                {
-                    throw new ConfigurationErrorsException(String.Format(
-                        CultureInfo.CurrentCulture,
-                        ServicesStrings.MissingRequiredConfigurationValue,
-                        "Auth.MicrosoftAccount.ClientSecret"));
-                }
-
-                opts.ClientSecret = ClientSecret;
-            }
+            throw new InvalidOperationException(string.Format(
+                CultureInfo.CurrentCulture,
+                ServicesStrings.MissingRequiredConfigurationValue,
+                "Auth.MicrosoftAccount.ClientId"));
         }
+
+        if (string.IsNullOrWhiteSpace(ClientSecret))
+        {
+            throw new InvalidOperationException(string.Format(
+                CultureInfo.CurrentCulture,
+                ServicesStrings.MissingRequiredConfigurationValue,
+                "Auth.MicrosoftAccount.ClientSecret"));
+        }
+
+        microsoftAccountOptions.ClientId = ClientId;
+        microsoftAccountOptions.ClientSecret = ClientSecret;
     }
 }

@@ -4,51 +4,68 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Web.Routing;
+using Microsoft.AspNetCore.Routing;
 using NuGet.Services.Entities;
 using NuGetGallery.Services.Helpers;
 
-namespace NuGetGallery.Services
+namespace NuGetGallery.Services;
+
+public class PackageFilter : IPackageFilter
 {
-    public class PackageFilter : IPackageFilter
+    private readonly IPackageService _packageService;
+
+    public PackageFilter(IPackageService packageService)
     {
-        private readonly IPackageService _packageService;
+        _packageService = packageService
+            ?? throw new ArgumentNullException(nameof(packageService));
+    }
 
-        public PackageFilter(IPackageService packageService)
-        {
-            _packageService = packageService ?? throw new ArgumentNullException(nameof(packageService));
-        }
-            
-        /// <inheritdoc />
-        public Package GetFiltered(IReadOnlyCollection<Package> packages, PackageFilterContext context)
-        {
-            Package result = null;
-            string routeUrl = null;
-            if (context.RouteBase is Route route)
-            {
-                routeUrl = route.Url;
-            }
+    /// <inheritdoc />
+    public Package GetFiltered(
+        IReadOnlyCollection<Package> packages,
+        PackageFilterContext context)
+    {
+        ArgumentNullException.ThrowIfNull(packages);
+        ArgumentNullException.ThrowIfNull(context);
 
-            var version = context.Version;
-            
-            if (string.Equals(version, LatestPackageRouteVerifier.SupportedRoutes.AbsoluteLatestUrlString, StringComparison.InvariantCultureIgnoreCase))
-            {
-                // The user is looking for the absolute latest version and not an exact version.
-                result = packages.FirstOrDefault(p => p.IsLatestSemVer2);
-            }
-            
-            result = result ?? _packageService.FilterExactPackage(packages, version);
-            
-            if (LatestPackageRouteVerifier.IsLatestRoute(routeUrl, out var preRelease))
-            {
-                result = result ?? _packageService.FilterLatestPackageBySuffix(packages, version, preRelease);
-            }
-            
-            // The package still wasn't found so let's just get the latest version. This applies when 
-            // no version is specified, or when the version asked for (in context.Version) wasn't found
-            result = result ?? _packageService.FilterLatestPackage(packages, SemVerLevelKey.SemVer2, allowPrerelease: true);
-            
-            return result;
+        Package result = null;
+
+        var routeUrl = context.Endpoint is RouteEndpoint routeEndpoint
+            ? routeEndpoint.RoutePattern.RawText
+            : null;
+
+        var version = context.Version;
+
+        if (string.Equals(
+                version,
+                LatestPackageRouteVerifier.SupportedRoutes.AbsoluteLatestUrlString,
+                StringComparison.InvariantCultureIgnoreCase))
+        {
+            // The user is looking for the absolute latest version and not an exact version.
+            result = packages.FirstOrDefault(p => p.IsLatestSemVer2);
         }
+
+        result = result
+            ?? _packageService.FilterExactPackage(packages, version);
+
+        if (LatestPackageRouteVerifier.IsLatestRoute(
+                routeUrl,
+                out var preRelease))
+        {
+            result = result
+                ?? _packageService.FilterLatestPackageBySuffix(
+                    packages,
+                    version,
+                    preRelease);
+        }
+
+        // The package still wasn't found, so get the latest version.
+        result = result
+            ?? _packageService.FilterLatestPackage(
+                packages,
+                SemVerLevelKey.SemVer2,
+                allowPrerelease: true);
+
+        return result;
     }
 }

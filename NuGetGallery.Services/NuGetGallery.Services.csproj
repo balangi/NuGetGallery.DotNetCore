@@ -7,6 +7,21 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Markdig" Version="1.6.0" />
+    <PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" Version="2.23.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.MicrosoftAccount" Version="10.0.15" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="10.0.15" />
+    <PackageReference Include="Microsoft.AspNetCore.Html.Abstractions" Version="2.3.14" />
+    <PackageReference Include="Microsoft.Identity.Web" Version="4.18.0" />
+    <PackageReference Include="Microsoft.IdentityModel.Validators" Version="8.23.0" />
+    <PackageReference Include="Microsoft.Security.Utilities.Core" Version="1.21.0" />
+    <PackageReference Include="NuGet.Protocol" Version="8.0.0" />
+    <PackageReference Include="System.ComponentModel.Composition" Version="11.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\NuGet.Services.Configuration\NuGet.Services.Configuration.csproj" />
+    <ProjectReference Include="..\NuGet.Services.KeyVault\NuGet.Services.KeyVault.csproj" />
     <ProjectReference Include="..\NuGet.Services.Staging\NuGet.Services.Staging.csproj" />
     <ProjectReference Include="..\NuGetGallery.Core\NuGetGallery.Core.csproj" />
   </ItemGroup>

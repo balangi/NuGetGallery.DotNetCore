@@ -1,120 +1,123 @@
 // Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
-using System;
-using System.Data.Common;
 using Microsoft.EntityFrameworkCore;
-using System.Data.Entity.Infrastructure;
-using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore.Design;
 
-namespace NuGetGallery.Areas.Admin.Models
+namespace NuGetGallery.Areas.Admin.Models;
+
+public class SupportRequestDbContextFactory : IDesignTimeDbContextFactory<SupportRequestDbContext>, IDbContextFactory<SupportRequestDbContext>
 {
-    /// <summary>
-    /// This SupportRequestDbContextFactory is provided for running migrations in a flexible way as follows:
-    /// 1. Run migration using DbConnection; (For DatabaseMigrationTools with Microsoft Entra ID token)
-    /// 2. Run migration using connection string;
-    /// 3. Run migration using default connection string ("name=Gallery.SupportRequestSqlServer") in a web.config; (For command-line migration with integrated Microsoft Entra ID/username+password)
-    /// </summary>
-    public class SupportRequestDbContextFactory : IDbContextFactory<SupportRequestDbContext>
+    public static Func<SupportRequestDbContext> SupportRequestEntitiesContextFactory;
+
+    public SupportRequestDbContext CreateDbContext(string[] args = null)
     {
-        public static Func<SupportRequestDbContext> SupportRequestEntitiesContextFactory;
-        public SupportRequestDbContext Create()
+        var factory = SupportRequestEntitiesContextFactory;
+        if (factory != null)
         {
-            var factory = SupportRequestEntitiesContextFactory;
-            return factory == null ? new SupportRequestDbContext("name=Gallery.SupportRequestSqlServer") : factory();
+            return factory();
         }
+
+        var optionsBuilder = new DbContextOptionsBuilder<SupportRequestDbContext>();
+        optionsBuilder.UseSqlServer("Server=(localdb)\\mssqllocaldb;Database=SupportRequestDb;Trusted_Connection=True;MultipleActiveResultSets=true");
+
+        return new SupportRequestDbContext(optionsBuilder.Options);
     }
 
-    [DbConfigurationType(typeof(EntitiesConfiguration))]
-    public class SupportRequestDbContext
-        : DbContext, ISupportRequestDbContext
+    // پیاده‌سازی صریح برای IDbContextFactory (زمان اجرای برنامه)
+    SupportRequestDbContext IDbContextFactory<SupportRequestDbContext>.CreateDbContext()
     {
-        static SupportRequestDbContext()
-        {
-            // Don't run migrations, ever!
-            Database.SetInitializer<SupportRequestDbContext>(null);
-        }
+        return CreateDbContext(null);
+    }
+}
 
-        /// <summary>
-        /// The NuGet Gallery code should usually use this constructor,
-        /// so that we can configure the connection via the Cloud Service configuration.
-        /// </summary>
-        public SupportRequestDbContext(string connectionString)
-            : base(connectionString)
-        {
-        }
+public class SupportRequestDbContext
+    : DbContext, ISupportRequestDbContext
+{
+    public SupportRequestDbContext(DbContextOptions<SupportRequestDbContext> options)
+        : base(options)
+    {
+    }
 
-        public SupportRequestDbContext(DbConnection connection)
-            : base(connection, contextOwnsConnection: true)
-        {
-        }
+    public virtual DbSet<Admin> Admins { get; set; }
 
-        public virtual IDbSet<Admin> Admins { get; set; }
+    public virtual DbSet<Issue> Issues { get; set; }
 
-        public virtual IDbSet<Issue> Issues { get; set; }
+    public virtual DbSet<IssueStatus> IssueStatus { get; set; }
 
-        public virtual IDbSet<IssueStatus> IssueStatus { get; set; }
+    public virtual DbSet<History> Histories { get; set; }
 
-        public virtual IDbSet<History> Histories { get; set; }
+    public async Task CommitChangesAsync()
+    {
+        await SaveChangesAsync();
+    }
 
-        public async Task CommitChangesAsync()
-        {
-            await SaveChangesAsync();
-        }
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
 
-        protected override void OnModelCreating(DbModelBuilder modelBuilder)
-        {
-            modelBuilder.Entity<Models.Admin>()
-                .Property(e => e.GalleryUsername).IsUnicode(false);
-            modelBuilder.Entity<Models.Admin>()
-                .HasMany(e => e.Issues)
-                .WithOptional(e => e.AssignedTo)
-                .HasForeignKey(e => e.AssignedToId);
-            modelBuilder.Entity<Models.Admin>()
-                .HasMany(e => e.HistoryEntries)
-                .WithOptional()
-                .HasForeignKey(e => e.AssignedToId);
+        modelBuilder.Entity<Admin>()
+            .Property(e => e.GalleryUsername).IsUnicode(false);
 
-            modelBuilder.Entity<History>()
-               .Property(e => e.Comments).IsUnicode(false);
-            modelBuilder.Entity<History>()
-               .Property(e => e.EditedBy).IsUnicode(false);
+        modelBuilder.Entity<Admin>()
+            .HasMany(e => e.Issues)
+            .WithOne(e => e.AssignedTo)
+            .IsRequired(false)
+            .HasForeignKey(e => e.AssignedToId);
 
-            modelBuilder.Entity<Issue>()
-                 .Property(e => e.CreatedBy).IsUnicode(false);
-            modelBuilder.Entity<Issue>()
-                .Property(e => e.IssueTitle).IsUnicode(false);
-            modelBuilder.Entity<Issue>()
-                .Property(e => e.Details).IsUnicode(false);
-            modelBuilder.Entity<Issue>()
-                .Property(e => e.SiteRoot).IsUnicode(false);
-            modelBuilder.Entity<Issue>()
-                .Property(e => e.PackageId).IsUnicode(false);
-            modelBuilder.Entity<Issue>()
-                .Property(e => e.PackageVersion).IsUnicode(false);
-            modelBuilder.Entity<Issue>()
-                .Property(e => e.OwnerEmail).IsUnicode(false);
-            modelBuilder.Entity<Issue>()
-                .Property(e => e.Reason).IsUnicode(false);
-            modelBuilder.Entity<Issue>()
-                .HasOptional(e => e.AssignedTo)
-                .WithMany(e => e.Issues)
-                .HasForeignKey(e => e.AssignedToId);
-            modelBuilder.Entity<Issue>()
-                .HasMany(e => e.HistoryEntries)
-                .WithRequired()
-                .HasForeignKey(e => e.IssueId);
-            modelBuilder.Entity<Issue>()
-                .HasRequired(e => e.IssueStatus)
-                .WithMany(e => e.Issues)
-                .HasForeignKey(e => e.IssueStatusId);
+        modelBuilder.Entity<Admin>()
+            .HasMany(e => e.HistoryEntries)
+            .WithOne()
+            .IsRequired(false)
+            .HasForeignKey(e => e.AssignedToId);
 
-            modelBuilder.Entity<IssueStatus>()
-                 .Property(e => e.Name).IsUnicode(false);
-            modelBuilder.Entity<IssueStatus>()
-                .HasMany(e => e.Issues)
-                .WithRequired(e => e.IssueStatus)
-                .HasForeignKey(e => e.IssueStatusId);
-        }
+        modelBuilder.Entity<History>()
+           .Property(e => e.Comments).IsUnicode(false);
+        modelBuilder.Entity<History>()
+           .Property(e => e.EditedBy).IsUnicode(false);
+
+        modelBuilder.Entity<Issue>()
+             .Property(e => e.CreatedBy).IsUnicode(false);
+        modelBuilder.Entity<Issue>()
+            .Property(e => e.IssueTitle).IsUnicode(false);
+        modelBuilder.Entity<Issue>()
+            .Property(e => e.Details).IsUnicode(false);
+        modelBuilder.Entity<Issue>()
+            .Property(e => e.SiteRoot).IsUnicode(false);
+        modelBuilder.Entity<Issue>()
+            .Property(e => e.PackageId).IsUnicode(false);
+        modelBuilder.Entity<Issue>()
+            .Property(e => e.PackageVersion).IsUnicode(false);
+        modelBuilder.Entity<Issue>()
+            .Property(e => e.OwnerEmail).IsUnicode(false);
+        modelBuilder.Entity<Issue>()
+            .Property(e => e.Reason).IsUnicode(false);
+
+        modelBuilder.Entity<Issue>()
+            .HasOne(e => e.AssignedTo)
+            .WithMany(e => e.Issues)
+            .HasForeignKey(e => e.AssignedToId)
+            .IsRequired(false);
+
+        modelBuilder.Entity<Issue>()
+            .HasMany(e => e.HistoryEntries)
+            .WithOne()
+            .IsRequired()
+            .HasForeignKey(e => e.IssueId);
+
+        modelBuilder.Entity<Issue>()
+            .HasOne(e => e.IssueStatus)
+            .WithMany(e => e.Issues)
+            .HasForeignKey(e => e.IssueStatusId)
+            .IsRequired();
+
+        modelBuilder.Entity<IssueStatus>()
+             .Property(e => e.Name).IsUnicode(false);
+
+        modelBuilder.Entity<IssueStatus>()
+            .HasMany(e => e.Issues)
+            .WithOne(e => e.IssueStatus)
+            .HasForeignKey(e => e.IssueStatusId)
+            .IsRequired();
     }
 }

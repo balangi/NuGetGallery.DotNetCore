@@ -1,100 +1,121 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
-using System;
-using System.Text;
-using System.Web;
-using System.Web.Security;
+
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using NuGet.Services.Entities;
+using System.Text;
 
-namespace NuGetGallery
+namespace NuGetGallery;
+
+public static class HttpContextExtensions
 {
-    public static class HttpContextBaseExtensions
+    // در ASP.NET Core برای دسترسی به Context جاری از IHttpContextAccessor استفاده می‌شود
+    public static HttpContext GetCurrent(IServiceProvider serviceProvider)
     {
-        public static HttpContextBase GetCurrent() => new HttpContextWrapper(HttpContext.Current);
+        var accessor = serviceProvider?.GetService<IHttpContextAccessor>();
+        return accessor?.HttpContext;
+    }
 
-        public static User GetCurrentUser(this HttpContextBase httpContext)
+    // این متد را با یک فراخوانی حدسی جایگزین نکنید.ساده‌ترین اصلاح این است که دریافت کاربر جاری را از این
+    // extension حذف و آن را در لایه‌ای انجام دهید که سرویس کاربر را از DI دریافت می‌کند.در
+    // HttpContextExtensions فعلاً این متد را حذف کنید:
+    //public static User GetCurrentUser(this HttpContext httpContext)
+    //{
+    //    // در صورت پیاده‌سازی سرویس استخراج کاربر از ClaimsPrincipal
+    //    return httpContext?.User?.GetCurrentUser();
+    //}
+
+    public static void SetConfirmationReturnUrl(this HttpContext httpContext, string returnUrl)
+    {
+        var confirmationContext = new ConfirmationContext
         {
-            return httpContext.GetOwinContext().GetCurrentUser();
+            ReturnUrl = returnUrl,
+        };
+        string json = JsonConvert.SerializeObject(confirmationContext);
+
+        // جایگزینی MachineKey با DataProtection بومی دات‌نت‌کر
+        var protector = httpContext.RequestServices
+            .GetRequiredService<IDataProtectionProvider>()
+            .CreateProtector("ConfirmationContext");
+
+        string protectedJson = Convert.ToBase64String(protector.Protect(Encoding.UTF8.GetBytes(json)));
+
+        httpContext.Response.Cookies.Append("ConfirmationContext", protectedJson, new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = httpContext.Request.IsHttps
+        });
+    }
+
+    public static string GetConfirmationReturnUrl(this HttpContext httpContext)
+    {
+        if (httpContext.Request.Cookies == null || !httpContext.Request.Cookies.TryGetValue("ConfirmationContext", out var protectedJson))
+        {
+            return null;
         }
 
-        public static void SetConfirmationReturnUrl(this HttpContextBase httpContext, string returnUrl)
+        if (string.IsNullOrEmpty(protectedJson))
         {
-            var confirmationContext = new ConfirmationContext
-            {
-                ReturnUrl = returnUrl,
-            };
-            string json = JsonConvert.SerializeObject(confirmationContext);
-            string protectedJson = Convert.ToBase64String(MachineKey.Protect(Encoding.UTF8.GetBytes(json), "ConfirmationContext"));
-            HttpCookie responseCookie = new HttpCookie("ConfirmationContext", protectedJson);
-            responseCookie.HttpOnly = true;
-            httpContext.Response.Cookies.Add(responseCookie);
+            return null;
         }
 
-        public static string GetConfirmationReturnUrl(this HttpContextBase httpContext)
+        try
         {
-            HttpCookie cookie = null;
-            if (httpContext.Request.Cookies != null)
-            {
-                cookie = httpContext.Request.Cookies.Get("ConfirmationContext");
-            }
+            var protector = httpContext.RequestServices
+                .GetRequiredService<IDataProtectionProvider>()
+                .CreateProtector("ConfirmationContext");
 
-            if (cookie == null)
-            {
-                return null;
-            }
+            var unprotectedBytes = protector.Unprotect(Convert.FromBase64String(protectedJson));
+            string json = Encoding.UTF8.GetString(unprotectedBytes);
 
-            var protectedJson = cookie.Value;
-            if (String.IsNullOrEmpty(protectedJson))
-            {
-                return null;
-            }
-
-            string json = Encoding.UTF8.GetString(MachineKey.Unprotect(Convert.FromBase64String(protectedJson), "ConfirmationContext"));
             var confirmationContext = JsonConvert.DeserializeObject<ConfirmationContext>(json);
-            return confirmationContext.ReturnUrl;
+            return confirmationContext?.ReturnUrl;
         }
-
-        /// <summary>
-        /// Best effort attempt to extract client information from the user-agent header.
-        /// According to documentation here: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/User-Agent 
-        /// the common structure for user-agent header is:
-        /// User-Agent: Mozilla/<version> (<system-information>) <platform> (<platform-details>) <extensions>
-        /// Thus, extracting the part before the first '(', should give us product and version tokens in MOST cases.
-        /// </summary>
-        public static string GetClientInformation(this HttpContextBase httpContext)
+        catch
         {
-            string userAgent = httpContext.GetUserAgent();
-            string result = string.Empty;
+            // اگر رمزگشایی به هر دلیلی (مثل تغییر کلیدها) خطا داد
+            return null;
+        }
+    }
 
-            if (!string.IsNullOrEmpty(userAgent))
+    public static string GetClientInformation(this HttpContext httpContext)
+    {
+        string userAgent = httpContext.GetUserAgent();
+        string result = string.Empty;
+
+        if (!string.IsNullOrEmpty(userAgent))
+        {
+            int commentPartStartIndex = userAgent.IndexOf('(');
+
+            if (commentPartStartIndex != -1)
             {
-                int commentPartStartIndex = userAgent.IndexOf('(');
-
-                if (commentPartStartIndex != -1)
-                {
-                    result = userAgent.Substring(0, commentPartStartIndex);
-                }
-                else
-                {
-                    result = userAgent;
-                }
-
-                result = result.Trim();
+                result = userAgent.Substring(0, commentPartStartIndex);
+            }
+            else
+            {
+                result = userAgent;
             }
 
-            return result;
+            result = result.Trim();
         }
 
-        public static string GetUserAgent(this HttpContextBase httpContext)
-        {
-            string userAgent = httpContext.Request.Headers[ServicesConstants.UserAgentHeaderName];
-            return userAgent ?? string.Empty;
-        }
+        return result;
     }
 
-    public class ConfirmationContext
+    public static string GetUserAgent(this HttpContext httpContext)
     {
-        public string ReturnUrl { get; set; }
+        if (httpContext.Request.Headers.TryGetValue(ServicesConstants.UserAgentHeaderName, out var userAgent))
+        {
+            return userAgent.ToString();
+        }
+        return string.Empty;
     }
+}
+
+public class ConfirmationContext
+{
+    public string ReturnUrl { get; set; }
 }
