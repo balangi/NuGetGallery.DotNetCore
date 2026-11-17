@@ -3,43 +3,42 @@
 
 using NuGet.Services.Entities;
 
-namespace NuGetGallery
+namespace NuGetGallery;
+
+public abstract class AccountViewModel<T> : AccountViewModel where T : User
 {
-    public abstract class AccountViewModel<T> : AccountViewModel where T : User
-    {
-        public T Account { get; set; }
+    public T Account { get; set; }
 
-        public bool IsCertificatesUIEnabled { get; set; }
+    public bool IsCertificatesUIEnabled { get; set; }
 
-        public override User User => Account;
-    }
+    public override User User => Account;
+}
 
-    public abstract class AccountViewModel
-    {
-        public virtual User User { get; }
+public abstract class AccountViewModel
+{
+    public virtual User User { get; }
 
-        public bool IsOrganization => User is Organization;
+    public bool IsOrganization => User is Organization;
 
-        public string AccountName { get; set; }
+    public string AccountName { get; set; }
 
-        public bool CanManage { get; set; }
+    public bool CanManage { get; set; }
 
-        public bool WasMultiFactorAuthenticated { get; set; }
+    public bool WasMultiFactorAuthenticated { get; set; }
 
-        public bool IsNewAccount2FAEnforcementEnabled { get; set; }
+    public bool IsNewAccount2FAEnforcementEnabled { get; set; }
 
-        public bool IsPackageStagingEnabled { get; set; }
+    public bool IsPackageStagingEnabled { get; set; }
 
-        public ChangeEmailViewModel ChangeEmail { get; set; }
+    public ChangeEmailViewModel ChangeEmail { get; set; }
 
-        public ChangeNotificationsViewModel ChangeNotifications { get; set; }
+    public ChangeNotificationsViewModel ChangeNotifications { get; set; }
 
-        public bool HasPassword { get; set; }
+    public bool HasPassword { get; set; }
 
-        public string CurrentEmailAddress { get; set; }
+    public string CurrentEmailAddress { get; set; }
 
-        public bool HasUnconfirmedEmailAddress { get; set; }
+    public bool HasUnconfirmedEmailAddress { get; set; }
 
-        public bool HasConfirmedEmailAddress { get; set; }
-    }
+    public bool HasConfirmedEmailAddress { get; set; }
 }

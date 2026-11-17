@@ -1,25 +1,39 @@
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Routing;
-using Microsoft.Extensions.DependencyInjection;
+// Copyright (c) .NET Foundation. All rights reserved.
+// Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
-namespace NuGetGallery
+using Microsoft.AspNetCore.OData;
+
+namespace NuGetGallery;
+
+/// <summary>
+/// Service and middleware setup replacing the legacy Web API configuration.
+/// </summary>
+public static class WebApiConfig
 {
-    /// <summary>Service and middleware setup replacing the legacy Web API config.</summary>
-    public static class WebApiConfig
+    public static IMvcBuilder Register(IServiceCollection services)
     {
-        public static IMvcBuilder Register(IServiceCollection services)
-        {
-            services.AddRouting();
-            return services
-                .AddControllers()
-                .AddOData(NuGetODataConfig.Configure);
-        }
+        services.AddRouting();
 
-        /// <summary>Call after service registration and endpoint middleware setup.</summary>
-        public static IEndpointRouteBuilder Map(IEndpointRouteBuilder endpoints)
-        {
-            return endpoints.MapGalleryRoutes();
-        }
+        return services
+            .AddControllers()
+            .AddOData(options =>
+            {
+                options.Select()
+                       .Filter()
+                       .OrderBy()
+                       .Expand()
+                       .Count()
+                       .SetMaxTop(100);
+            });
+    }
+
+    /// <summary>
+    /// Maps MVC and OData controller endpoints.
+    /// Call this method after service registration.
+    /// </summary>
+    public static IEndpointRouteBuilder Map(IEndpointRouteBuilder endpoints)
+    {
+        endpoints.MapControllers();
+        return endpoints;
     }
 }

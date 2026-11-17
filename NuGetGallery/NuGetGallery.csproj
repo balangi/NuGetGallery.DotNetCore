@@ -7,7 +7,18 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Autofac" Version="9.3.4" />
+    <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="11.0.2" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="10.0.15" />
+    <PackageReference Include="Microsoft.AspNetCore.OData" Version="9.5.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.15" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\NuGet.Services.Configuration\NuGet.Services.Configuration.csproj" />
+    <ProjectReference Include="..\NuGetGallery.Core\NuGetGallery.Core.csproj" />
+    <ProjectReference Include="..\NuGetGallery.Services\NuGetGallery.Services.csproj" />
   </ItemGroup>
 
 </Project>

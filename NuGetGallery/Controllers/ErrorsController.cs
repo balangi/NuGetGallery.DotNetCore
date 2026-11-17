@@ -1,34 +1,35 @@
-﻿// Copyright (c) .NET Foundation. All rights reserved.
-// Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
+﻿using Microsoft.AspNetCore.Mvc;
 
-using System.Web.Mvc;
+namespace NuGetGallery;
 
-namespace NuGetGallery
+public partial class ErrorsController : AppController
 {
-    public partial class ErrorsController : AppController
+    // در ASP.NET Core از [HttpGet] و [HttpHead] استفاده می‌شود
+    [HttpGet]
+    [HttpHead]
+    public virtual IActionResult BadRequest()
     {
-        [AcceptVerbs(HttpVerbs.Get | HttpVerbs.Head)]
-        public virtual ActionResult BadRequest()
-        {
-            return View();
-        }
+        return View();
+    }
 
-        [AcceptVerbs(HttpVerbs.Get | HttpVerbs.Head)]
-        public virtual ActionResult NotFound()
-        {
-            return View();
-        }
+    [HttpGet]
+    [HttpHead]
+    public virtual IActionResult NotFound()
+    {
+        return View();
+    }
 
-        [AcceptVerbs(HttpVerbs.Get | HttpVerbs.Head)]
-        public virtual ActionResult InternalError()
-        {
-            return View();
-        }
+    [HttpGet]
+    [HttpHead]
+    public virtual IActionResult InternalError()
+    {
+        return View();
+    }
 
-        [AcceptVerbs(HttpVerbs.Get | HttpVerbs.Head)]
-        public virtual ActionResult ReadOnlyMode()
-        {
-            return View();
-        }
+    [HttpGet]
+    [HttpHead]
+    public virtual IActionResult ReadOnlyMode()
+    {
+        return View();
     }
 }

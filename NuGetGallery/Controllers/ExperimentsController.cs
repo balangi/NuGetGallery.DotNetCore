@@ -3,53 +3,58 @@
 
 using System;
 using System.Threading.Tasks;
-using System.Web.Mvc;
+using Microsoft.AspNetCore.Mvc;
 
-namespace NuGetGallery.Controllers
+namespace NuGetGallery.Controllers;
+
+public class ExperimentsController : AppController
 {
-    public class ExperimentsController : AppController
+    private readonly ISearchSideBySideService _searchSideBySideService;
+    private readonly IFeatureFlagService _featureFlagService;
+
+    public ExperimentsController(
+        ISearchSideBySideService searchSideBySideService,
+        IFeatureFlagService featureFlagService)
     {
-        private readonly ISearchSideBySideService _searchSideBySideService;
-        private readonly IFeatureFlagService _featureFlagService;
+        _searchSideBySideService = searchSideBySideService ?? throw new ArgumentNullException(nameof(searchSideBySideService));
+        _featureFlagService = featureFlagService ?? throw new ArgumentNullException(nameof(featureFlagService));
+    }
 
-        public ExperimentsController(
-            ISearchSideBySideService searchSideBySideService,
-            IFeatureFlagService featureFlagService)
+    [HttpGet]
+    public async Task<IActionResult> SearchSideBySide(string q = null)
+    {
+        var currentUser = GetCurrentUser();
+        if (!_featureFlagService.IsSearchSideBySideEnabled(currentUser))
         {
-            _searchSideBySideService = searchSideBySideService ?? throw new ArgumentNullException(nameof(searchSideBySideService));
-            _featureFlagService = featureFlagService ?? throw new ArgumentNullException(nameof(featureFlagService));
+            return View(new SearchSideBySideViewModel { IsDisabled = true });
         }
 
-        [HttpGet]
-        public async Task<ActionResult> SearchSideBySide(string q = null)
+        var viewModel = await _searchSideBySideService.SearchAsync(q, currentUser);
+
+        return View(viewModel);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SearchSideBySide(SearchSideBySideViewModel input)
+    {
+        var currentUser = GetCurrentUser();
+        if (!_featureFlagService.IsSearchSideBySideEnabled(currentUser))
         {
-            var currentUser = GetCurrentUser();
-            if (!_featureFlagService.IsSearchSideBySideEnabled(currentUser))
-            {
-                return View(new SearchSideBySideViewModel { IsDisabled = true });
-            }
-
-            var viewModel = await _searchSideBySideService.SearchAsync(q, currentUser);
-
-            return View(viewModel);
+            return NotFound();
         }
 
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<ActionResult> SearchSideBySide(SearchSideBySideViewModel input)
-        {
-            var currentUser = GetCurrentUser();
-            if (!_featureFlagService.IsSearchSideBySideEnabled(currentUser))
-            {
-                return new HttpNotFoundResult();
-            }
+        var searchTerm = input.SearchTerm?.Trim();
+        var searchUrl = Url.Action(
+            action: nameof(SearchSideBySide),
+            controller: "Experiments",
+            values: string.IsNullOrEmpty(searchTerm) ? null : new { q = searchTerm },
+            protocol: Request.Scheme);
 
-            var searchUrl = Url.SearchSideBySide(searchTerm: input.SearchTerm?.Trim(), relativeUrl: false);
-            await _searchSideBySideService.RecordFeedbackAsync(input, searchUrl);
+        await _searchSideBySideService.RecordFeedbackAsync(input, searchUrl);
 
-            TempData["Message"] = "Thank you for providing feedback! Feel free to try some other queries.";
+        TempData["Message"] = "Thank you for providing feedback! Feel free to try some other queries.";
 
-            return RedirectToAction(nameof(SearchSideBySide));
-        }
+        return RedirectToAction(nameof(SearchSideBySide));
     }
 }
